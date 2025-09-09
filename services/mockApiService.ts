@@ -1,4 +1,4 @@
-import { Distributor, SKU, Scheme, WalletTransaction, TransactionType, Order, OrderItem, UserRole, Notification, NotificationType, EnrichedOrderItem, User, SpecialPrice, InvoiceData, EnrichedWalletTransaction } from '../types';
+import { Distributor, SKU, Scheme, WalletTransaction, TransactionType, Order, OrderItem, UserRole, Notification, NotificationType, EnrichedOrderItem, User, SpecialPrice, InvoiceData, EnrichedWalletTransaction, OrderStatus } from '../types';
 import { DEFAULT_CREDIT_LIMIT } from '../config';
 
 // --- MOCK DATABASE (Simulating Google Sheets) ---
@@ -105,17 +105,17 @@ let walletTransactions: WalletTransaction[] = [
     { id: 'TRN004', distributorId: 'STA-9012-24-GH', amount: 7000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
 
     // Order Debits (linked to orders below)
-    { id: 'TRN-ORD01', distributorId: 'VIP-7890-24-AB', amount: -690, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
-    { id: 'TRN-ORD02', distributorId: 'SCH-1234-24-CD', amount: -2600, creditAmount: -400, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
-    { id: 'TRN-ORD03', distributorId: 'STA-9012-24-GH', amount: -1200, creditAmount: -600, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
-    { id: 'TRN-ORD04', distributorId: 'PRI-5678-24-EF', amount: -1800, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+    { id: 'TRN-ORD01', orderId: 'ORD01', distributorId: 'VIP-7890-24-AB', amount: -690, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+    { id: 'TRN-ORD02', orderId: 'ORD02', distributorId: 'SCH-1234-24-CD', amount: -2600, creditAmount: -400, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+    { id: 'TRN-ORD03', orderId: 'ORD03', distributorId: 'STA-9012-24-GH', amount: -1200, creditAmount: -600, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+    { id: 'TRN-ORD04', orderId: 'ORD04', distributorId: 'PRI-5678-24-EF', amount: -1800, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
 ];
 
 let orders: Order[] = [
-    { id: 'ORD01', distributorId: 'VIP-7890-24-AB', totalAmount: 690, coveredByWallet: 690, coveredByCredit: 0, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive' },
-    { id: 'ORD02', distributorId: 'SCH-1234-24-CD', totalAmount: 3000, coveredByWallet: 2600, coveredByCredit: 400, date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive' },
-    { id: 'ORD03', distributorId: 'STA-9012-24-GH', totalAmount: 1800, coveredByWallet: 1200, coveredByCredit: 600, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive' },
-    { id: 'ORD04', distributorId: 'PRI-5678-24-EF', totalAmount: 1800, coveredByWallet: 1800, coveredByCredit: 0, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive' },
+    { id: 'ORD01', distributorId: 'VIP-7890-24-AB', totalAmount: 690, coveredByWallet: 690, coveredByCredit: 0, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
+    { id: 'ORD02', distributorId: 'SCH-1234-24-CD', totalAmount: 3000, coveredByWallet: 2600, coveredByCredit: 400, date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.PENDING },
+    { id: 'ORD03', distributorId: 'STA-9012-24-GH', totalAmount: 1800, coveredByWallet: 1200, coveredByCredit: 600, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.PENDING },
+    { id: 'ORD04', distributorId: 'PRI-5678-24-EF', totalAmount: 1800, coveredByWallet: 1800, coveredByCredit: 0, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
 ];
 
 let orderItems: OrderItem[] = [
@@ -181,6 +181,59 @@ const checkCreditLimitAndNotify = (distributorId: string) => {
         notifications.unshift(newNotification);
     }
 };
+
+const calculateOrderTotal = (
+    items: { skuId: string; quantity: number }[],
+    distributorId: string
+): { finalOrderItems: Omit<OrderItem, 'orderId'>[], totalAmount: number } => {
+    
+    const newOrderItems: Omit<OrderItem, 'orderId'>[] = [];
+    let totalAmount = 0;
+
+    const today = new Date().toISOString().split('T')[0];
+    const distributorPrices = specialPrices.filter(sp =>
+        sp.distributorId === distributorId && sp.startDate <= today && sp.endDate >= today
+    );
+
+    const distributorSpecificSchemes = schemes.filter(s => s.distributorId === distributorId);
+    const applicableSchemes = distributorSpecificSchemes.length > 0
+        ? distributorSpecificSchemes
+        : schemes.filter(s => s.isGlobal);
+
+    for (const item of items) {
+        if (item.quantity <= 0) continue;
+        const sku = skus.find(s => s.id === item.skuId);
+        if (!sku) continue;
+        const specialPrice = distributorPrices.find(sp => sp.skuId === item.skuId);
+        const unitPrice = specialPrice ? specialPrice.price : sku.price;
+        totalAmount += item.quantity * unitPrice;
+        newOrderItems.push({ skuId: item.skuId, quantity: item.quantity, freeQuantity: 0, unitPrice: unitPrice, isFreebie: false });
+    }
+
+    const freebies: Omit<OrderItem, 'orderId'>[] = [];
+    for (const scheme of applicableSchemes) {
+        const buyItem = newOrderItems.find(oi => oi.skuId === scheme.buySkuId && !oi.isFreebie);
+        if (buyItem) {
+            const timesSchemeApplied = Math.floor(buyItem.quantity / scheme.buyQuantity);
+            if (timesSchemeApplied > 0) {
+                const getSku = skus.find(s => s.id === scheme.getSkuId);
+                if (getSku) {
+                    const totalFreeQuantity = timesSchemeApplied * scheme.getQuantity;
+                    const existingFreebie = freebies.find(f => f.skuId === scheme.getSkuId);
+                    if (existingFreebie) {
+                        existingFreebie.quantity += totalFreeQuantity;
+                    } else {
+                        freebies.push({ skuId: scheme.getSkuId, quantity: totalFreeQuantity, unitPrice: 0, freeQuantity: 0, isFreebie: true });
+                    }
+                }
+            }
+        }
+    }
+    
+    const finalOrderItems = [...newOrderItems, ...freebies];
+    return { finalOrderItems, totalAmount };
+};
+
 
 // --- API FUNCTIONS ---
 
@@ -296,9 +349,12 @@ export const api = {
         .filter(t => t.distributorId === distributorId)
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    const enrichedTransactions: EnrichedWalletTransaction[] = [];
     let runningBalance = 0;
-
+    // Find the initial balance by summing up all transactions *before* the first one in the sorted list (edge case, usually 0)
+    // This isn't perfect for a real system, but for mock data it works by re-calculating from zero.
+    
+    // We can find total balance by looking at the distributor object, and work backwards. Or simpler, just calculate forwards.
+    const enrichedTransactions: EnrichedWalletTransaction[] = [];
     for (const t of distributorTransactions) {
         runningBalance += t.amount;
         enrichedTransactions.push({
@@ -391,70 +447,7 @@ export const api = {
     const distributor = distributors.find(d => d.id === distributorId);
     if (!distributor) throw new Error("Distributor not found");
 
-    const newOrderItems: Omit<OrderItem, 'orderId'>[] = [];
-    let totalAmount = 0;
-    
-    // 1. Get relevant pricing and schemes
-    const today = new Date().toISOString().split('T')[0];
-    const distributorPrices = specialPrices.filter(sp => 
-        sp.distributorId === distributorId && sp.startDate <= today && sp.endDate >= today
-    );
-
-    // Check for distributor-specific schemes. If they exist, use them exclusively. Otherwise, use global schemes.
-    const distributorSpecificSchemes = schemes.filter(s => s.distributorId === distributorId);
-    const applicableSchemes = distributorSpecificSchemes.length > 0 
-        ? distributorSpecificSchemes
-        : schemes.filter(s => s.isGlobal);
-
-    // 2. Process paid items and calculate cost
-    for (const item of items) {
-        if (item.quantity <= 0) continue;
-        
-        const sku = skus.find(s => s.id === item.skuId);
-        if(!sku) continue;
-
-        const specialPrice = distributorPrices.find(sp => sp.skuId === item.skuId);
-        const unitPrice = specialPrice ? specialPrice.price : sku.price;
-        
-        totalAmount += item.quantity * unitPrice;
-
-        newOrderItems.push({
-            skuId: item.skuId,
-            quantity: item.quantity,
-            freeQuantity: 0,
-            unitPrice: unitPrice,
-            isFreebie: false,
-        });
-    }
-
-    // 3. Process schemes and add free items
-    const freebies: Omit<OrderItem, 'orderId'>[] = [];
-    for (const scheme of applicableSchemes) {
-        const buyItem = newOrderItems.find(oi => oi.skuId === scheme.buySkuId && !oi.isFreebie);
-        if (buyItem) {
-            const timesSchemeApplied = Math.floor(buyItem.quantity / scheme.buyQuantity);
-            if (timesSchemeApplied > 0) {
-                const getSku = skus.find(s => s.id === scheme.getSkuId);
-                if (getSku) {
-                    const totalFreeQuantity = timesSchemeApplied * scheme.getQuantity;
-                    const existingFreebie = freebies.find(f => f.skuId === scheme.getSkuId);
-                    if (existingFreebie) {
-                        existingFreebie.quantity += totalFreeQuantity;
-                    } else {
-                        freebies.push({
-                            skuId: scheme.getSkuId,
-                            quantity: totalFreeQuantity,
-                            unitPrice: 0,
-                            freeQuantity: 0, // This property is legacy, main logic uses isFreebie
-                            isFreebie: true,
-                        });
-                    }
-                }
-            }
-        }
-    }
-    
-    const finalOrderItems = [...newOrderItems, ...freebies];
+    const { finalOrderItems, totalAmount } = calculateOrderTotal(items, distributorId);
 
     const availableCredit = distributor.creditLimit - distributor.creditUsed;
     const totalAvailableFunds = distributor.walletBalance + availableCredit;
@@ -487,6 +480,7 @@ export const api = {
         coveredByCredit: paidByCredit,
         date: new Date().toISOString(),
         placedByExecId,
+        status: OrderStatus.PENDING,
     };
     orders.push(newOrder);
 
@@ -502,9 +496,10 @@ export const api = {
     };
     notifications.unshift(successNotification);
     
-    if (paidByWallet > 0) {
+    if (paidByWallet > 0 || paidByCredit > 0) {
         const debitTransaction: WalletTransaction = {
             id: generateId('TRN'),
+            orderId: newOrderId,
             distributorId,
             amount: -paidByWallet,
             creditAmount: paidByCredit > 0 ? -paidByCredit : undefined,
@@ -520,6 +515,107 @@ export const api = {
     return simulateDelay(newOrder);
   },
   
+  updateOrderStatus: async (orderId: string, status: OrderStatus, actorId: string): Promise<Order> => {
+    const orderIndex = orders.findIndex(o => o.id === orderId);
+    if (orderIndex === -1) throw new Error("Order not found");
+
+    const updatedOrder = {
+        ...orders[orderIndex],
+        status: status,
+    };
+
+    orders = orders.map(order => (order.id === orderId ? updatedOrder : order));
+
+    if (status === OrderStatus.DELIVERED) {
+        const confirmationTransaction: WalletTransaction = {
+            id: generateId('TRN'),
+            orderId,
+            distributorId: updatedOrder.distributorId,
+            amount: 0,
+            type: TransactionType.ORDER_CONFIRMED,
+            date: new Date().toISOString(),
+            addedBy: actorId,
+        };
+        walletTransactions.push(confirmationTransaction);
+    }
+
+    return simulateDelay(updatedOrder);
+  },
+  
+  updateOrderItems: async (
+    orderId: string,
+    newItems: { skuId: string; quantity: number }[],
+    actorId: string
+  ): Promise<Order> => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) throw new Error("Order not found");
+    if (order.status === OrderStatus.DELIVERED) throw new Error("Cannot edit a delivered order");
+
+    const distributor = distributors.find(d => d.id === order.distributorId);
+    if (!distributor) throw new Error("Distributor not found for this order");
+    
+    const { finalOrderItems: newFinalOrderItems, totalAmount: newTotalAmount } = calculateOrderTotal(newItems, distributor.id);
+
+    const delta = newTotalAmount - order.totalAmount;
+    
+    // If cost increased, check if distributor can afford it
+    if (delta > 0) {
+        const availableCredit = distributor.creditLimit - distributor.creditUsed;
+        const totalAvailableFunds = distributor.walletBalance + availableCredit;
+        if (delta > totalAvailableFunds) {
+            throw new Error(`Insufficient funds to cover price increase of ₹${delta.toLocaleString()}.`);
+        }
+    }
+
+    // Apply financial delta
+    let walletChange = 0;
+    let creditChange = 0;
+
+    if (delta > 0) { // Debit distributor
+        const debitFromWallet = Math.min(delta, distributor.walletBalance);
+        const debitFromCredit = delta - debitFromWallet;
+        distributor.walletBalance -= debitFromWallet;
+        distributor.creditUsed += debitFromCredit;
+        walletChange = -debitFromWallet;
+        creditChange = debitFromCredit;
+    } else if (delta < 0) { // Credit distributor
+        const creditAmount = Math.abs(delta);
+        const creditToCreditUsed = Math.min(creditAmount, order.coveredByCredit + creditChange); // Use updated credit
+        const creditToWallet = creditAmount - creditToCreditUsed;
+        distributor.creditUsed -= creditToCreditUsed;
+        distributor.walletBalance += creditToWallet;
+        walletChange = creditToWallet;
+        creditChange = -creditToCreditUsed;
+    }
+
+    // Update order object
+    order.totalAmount = newTotalAmount;
+    order.coveredByWallet += walletChange;
+    order.coveredByCredit += creditChange;
+
+    // Replace order items
+    orderItems = orderItems.filter(oi => oi.orderId !== orderId);
+    newFinalOrderItems.forEach(item => orderItems.push({ ...item, orderId: orderId }));
+
+    // Add an adjustment transaction
+    if (delta !== 0) {
+        const adjustmentTransaction: WalletTransaction = {
+            id: generateId('TRN'),
+            orderId: order.id,
+            distributorId: distributor.id,
+            amount: walletChange,
+            creditAmount: creditChange > 0 ? -creditChange : undefined, // Store as negative for consistency
+            type: TransactionType.ORDER_ADJUSTMENT,
+            date: new Date().toISOString(),
+            addedBy: actorId,
+        };
+        walletTransactions.push(adjustmentTransaction);
+    }
+    
+    checkCreditLimitAndNotify(distributor.id);
+    return simulateDelay(order);
+  },
+
   getInvoiceData: async (orderId: string): Promise<InvoiceData | null> => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return simulateDelay(null);

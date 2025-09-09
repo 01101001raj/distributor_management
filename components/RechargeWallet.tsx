@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import Card from './common/Card';
@@ -30,19 +31,21 @@ const RechargeWallet: React.FC = () => {
   }, []);
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
-    setIsLoading(true);
-    setStatusMessage(null);
-    try {
-      await api.rechargeWallet(data.distributorId, Number(data.amount), currentUser!.username);
-      setStatusMessage({ type: 'success', text: `₹${data.amount} successfully added to ${selectedDistributor?.name}'s account.` });
-      // Refetch distributors to show updated balance
-      api.getDistributors().then(setDistributors);
-      reset();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      setStatusMessage({ type: 'error', text: `Failed to recharge wallet: ${errorMessage}` });
-    } finally {
-      setIsLoading(false);
+    if (window.confirm(`Are you sure you want to add ₹${Number(data.amount).toLocaleString()} to ${selectedDistributor?.name}'s wallet? This action cannot be undone.`)) {
+      setIsLoading(true);
+      setStatusMessage(null);
+      try {
+        await api.rechargeWallet(data.distributorId, Number(data.amount), currentUser!.username);
+        setStatusMessage({ type: 'success', text: `₹${data.amount.toLocaleString()} successfully added to ${selectedDistributor?.name}'s account.` });
+        // Refetch distributors to show updated balance
+        api.getDistributors().then(setDistributors);
+        reset();
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        setStatusMessage({ type: 'error', text: `Failed to recharge wallet: ${errorMessage}` });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
   

@@ -9,6 +9,8 @@ export enum UserRole {
 export enum TransactionType {
   RECHARGE = 'RECHARGE',
   ORDER_DEBIT = 'ORDER_DEBIT',
+  ORDER_ADJUSTMENT = 'ORDER_ADJUSTMENT',
+  ORDER_CONFIRMED = 'ORDER_CONFIRMED',
 }
 
 export enum NotificationType {
@@ -18,6 +20,11 @@ export enum NotificationType {
   NEW_SCHEME = 'NEW_SCHEME',
   DISTRIBUTOR_ADDED = 'DISTRIBUTOR_ADDED',
   CREDIT_LIMIT_HIGH = 'CREDIT_LIMIT_HIGH',
+}
+
+export enum OrderStatus {
+    PENDING = 'Pending',
+    DELIVERED = 'Delivered',
 }
 
 export interface User {
@@ -77,6 +84,7 @@ export interface WalletTransaction {
   type: TransactionType;
   date: string;
   addedBy: string;
+  orderId?: string;
 }
 
 export interface EnrichedWalletTransaction extends WalletTransaction {
@@ -91,6 +99,7 @@ export interface Order {
   coveredByCredit: number;
   date: string;
   placedByExecId: string;
+  status: OrderStatus;
 }
 
 export interface OrderItem {

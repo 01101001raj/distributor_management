@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/mockApiService';
-import { Distributor, Order, WalletTransaction, TransactionType, SpecialPrice, Scheme, SKU, UserRole, EnrichedOrderItem, EnrichedWalletTransaction } from '../types';
+import { Distributor, Order, WalletTransaction, TransactionType, SpecialPrice, Scheme, SKU, UserRole, EnrichedOrderItem, EnrichedWalletTransaction, OrderStatus } from '../types';
 import Card from './common/Card';
-import { ArrowLeft, User, Phone, MapPin, Wallet, CreditCard, ShoppingCart, TrendingUp, TrendingDown, Star, Sparkles, PlusCircle, Save, X, Trash2, ChevronDown, ChevronRight, Gift, Edit } from 'lucide-react';
+import { ArrowLeft, User, Phone, MapPin, Wallet, CreditCard, ShoppingCart, TrendingUp, TrendingDown, Star, Sparkles, PlusCircle, Save, X, Trash2, ChevronDown, ChevronRight, Gift, Edit, CheckCircle, XCircle } from 'lucide-react';
 import Button from './common/Button';
 import Input from './common/Input';
 import Select from './common/Select';
 import { useAuth } from '../hooks/useAuth';
+import EditOrderModal from './EditOrderModal';
 
 const DistributorDetailsPage: React.FC = () => {
   const { distributorId } = useParams<{ distributorId: string }>();
@@ -20,11 +21,14 @@ const DistributorDetailsPage: React.FC = () => {
   const [skus, setSkus] = useState<SKU[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { userRole } = useAuth();
+  const { userRole, currentUser } = useAuth();
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
       if (!distributorId) {
         setError("No distributor ID provided.");
         setLoading(false);
@@ -59,15 +63,47 @@ const DistributorDetailsPage: React.FC = () => {
       } finally {
         setLoading(false);
       }
-    };
+    }, [distributorId]);
 
   useEffect(() => {
     fetchData();
-  }, [distributorId]);
+  }, [fetchData]);
   
+  const handleMarkDelivered = async (orderId: string) => {
+      if (window.confirm("Mark this order as delivered? It cannot be edited further.")) {
+          if (!currentUser) {
+              setStatusMessage({ type: 'error', text: 'You must be logged in to perform this action.' });
+              return;
+          }
+          setStatusMessage(null);
+          setUpdatingOrderId(orderId);
+
+          try {
+            await api.updateOrderStatus(orderId, OrderStatus.DELIVERED, currentUser.username);
+            setStatusMessage({ type: 'success', text: `Order ${orderId} has been marked as delivered.` });
+            setTimeout(() => setStatusMessage(null), 4000);
+            await fetchData();
+          } catch (error) {
+              console.error("Failed to mark as delivered:", error);
+              setStatusMessage({ type: 'error', text: "Could not update order status. Please try again." });
+          } finally {
+              setUpdatingOrderId(null);
+          }
+      }
+  };
+
   const toggleExpand = (orderId: string) => {
+    if (updatingOrderId) return;
     setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
   };
+  
+  const getStatusChip = (status: OrderStatus) => {
+      const baseClasses = "px-2 py-1 text-xs font-semibold rounded-full";
+      if (status === OrderStatus.DELIVERED) {
+          return <span className={`${baseClasses} bg-green-100 text-green-800`}>{status}</span>;
+      }
+      return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>{status}</span>;
+  }
   
   const creditUsagePercent = distributor ? (distributor.creditLimit > 0 ? (distributor.creditUsed / distributor.creditLimit) * 100 : 0) : 0;
 
@@ -79,6 +115,12 @@ const DistributorDetailsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+       {statusMessage && (
+          <div className={`p-3 rounded-md flex items-center ${statusMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              {statusMessage.type === 'success' ? <CheckCircle className="mr-2" /> : <XCircle className="mr-2" />}
+              {statusMessage.text}
+          </div>
+      )}
       <div className="flex items-center justify-between">
         <Button onClick={() => navigate("/dashboard")} variant="secondary" size="sm">
           <ArrowLeft size={16} className="mr-2" />
@@ -174,23 +216,37 @@ const DistributorDetailsPage: React.FC = () => {
                           <th className="p-2 w-10"></th>
                           <th className="p-2 text-sm font-semibold text-black">Order ID</th>
                           <th className="p-2 text-sm font-semibold text-black">Date</th>
+                          <th className="p-2 text-sm font-semibold text-black">Status</th>
                           <th className="p-2 text-sm font-semibold text-black text-right">Amount</th>
                       </tr>
                   </thead>
                   <tbody>
                       {orders.map(o => (
                           <React.Fragment key={o.id}>
-                              <tr className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => toggleExpand(o.id)}>
+                              <tr className="border-b last:border-0 hover:bg-gray-50">
                                   <td className="p-2 text-center">
-                                      {expandedOrderId === o.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                      <button onClick={() => toggleExpand(o.id)} className="hover:bg-gray-200 rounded-full p-1 disabled:opacity-50" disabled={!!updatingOrderId}>
+                                        {expandedOrderId === o.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                      </button>
                                   </td>
-                                  <td className="p-2 font-mono text-xs">{o.id}</td>
-                                  <td className="p-2 text-sm">{new Date(o.date).toLocaleDateString()}</td>
-                                  <td className="p-2 font-semibold text-right">₹{o.totalAmount.toLocaleString()}</td>
+                                  <td className="p-2 font-mono text-xs" onClick={() => toggleExpand(o.id)}>{o.id}</td>
+                                  <td className="p-2 text-sm" onClick={() => toggleExpand(o.id)}>{new Date(o.date).toLocaleDateString()}</td>
+                                  <td className="p-2" onClick={() => toggleExpand(o.id)}>{getStatusChip(o.status)}</td>
+                                  <td className="p-2 font-semibold text-right" onClick={() => toggleExpand(o.id)}>₹{o.totalAmount.toLocaleString()}</td>
                               </tr>
+                               {o.status === OrderStatus.PENDING && (
+                                  <tr className="border-b last:border-0">
+                                      <td colSpan={5} className="py-1 px-4 text-right bg-gray-50">
+                                          <div className="flex justify-end gap-2">
+                                              <Button size="sm" variant="secondary" onClick={() => setEditingOrder(o)} disabled={!!updatingOrderId}><Edit size={14} className="mr-1"/> Edit</Button>
+                                              <Button size="sm" variant="primary" className="bg-green-600 hover:bg-green-700" onClick={() => handleMarkDelivered(o.id)} isLoading={updatingOrderId === o.id} disabled={!!updatingOrderId}><CheckCircle size={14} className="mr-1"/> Deliver</Button>
+                                          </div>
+                                      </td>
+                                  </tr>
+                               )}
                               {expandedOrderId === o.id && (
                                   <tr className="bg-blue-50/50">
-                                      <td colSpan={4} className="p-4">
+                                      <td colSpan={5} className="p-4">
                                           <OrderDetails orderId={o.id} />
                                       </td>
                                   </tr>
@@ -203,6 +259,16 @@ const DistributorDetailsPage: React.FC = () => {
           </div>
         </Card>
       </div>
+      {editingOrder && (
+          <EditOrderModal
+              order={editingOrder}
+              onClose={() => setEditingOrder(null)}
+              onSave={() => {
+                  setEditingOrder(null);
+                  fetchData(); // Refetch all data to reflect changes
+              }}
+          />
+      )}
     </div>
   );
 };
