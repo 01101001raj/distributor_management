@@ -47,7 +47,8 @@ const DistributorDetailsPage: React.FC = () => {
         } else {
           setDistributor(distributorData);
           setOrders(ordersData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-          setTransactions(transactionsData); // API now returns sorted oldest to newest
+          // Sort from newest to oldest for display, even though API calculates oldest to newest.
+          setTransactions(transactionsData.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())); 
           setSpecialPrices(specialPricesData);
           setSchemes(schemesData);
           setSkus(skusData);
@@ -339,6 +340,31 @@ const SpecialPricesManager: React.FC<{ distributorId: string; initialPrices: Spe
         }));
     };
     
+    const handleSetDateRange = (skuId: string, months: number) => {
+        const currentPriceInfo = editedPrices[skuId] || {};
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of day
+        const startDateString = currentPriceInfo.startDate || today.toISOString().split('T')[0];
+        
+        const startDate = new Date(startDateString);
+        
+        const endDate = new Date(startDate.getTime()); // Clone the date
+        endDate.setMonth(endDate.getMonth() + months);
+        endDate.setDate(endDate.getDate() - 1); // Make the end date inclusive
+        
+        const endDateString = endDate.toISOString().split('T')[0];
+
+        setEditedPrices(prev => ({
+            ...prev,
+            [skuId]: {
+                ...prev[skuId],
+                skuId: skuId,
+                startDate: startDateString,
+                endDate: endDateString,
+            }
+        }));
+    };
+
     return (
         <Card>
             <div className="flex justify-between items-center mb-4">
@@ -371,7 +397,14 @@ const SpecialPricesManager: React.FC<{ distributorId: string; initialPrices: Spe
                                         <td className="p-2 text-center">₹{sku.price.toLocaleString()}</td>
                                         <td className="p-2"><Input label="" type="number" placeholder="Default" value={edited.price ?? ''} onChange={(e) => handleInputChange(sku.id, 'price', e.target.value)} /></td>
                                         <td className="p-2"><Input label="" type="date" value={edited.startDate ?? ''} onChange={(e) => handleInputChange(sku.id, 'startDate', e.target.value)} /></td>
-                                        <td className="p-2"><Input label="" type="date" value={edited.endDate ?? ''} onChange={(e) => handleInputChange(sku.id, 'endDate', e.target.value)} /></td>
+                                        <td className="p-2">
+                                            <Input label="" type="date" value={edited.endDate ?? ''} onChange={(e) => handleInputChange(sku.id, 'endDate', e.target.value)} />
+                                            <div className="flex gap-1 mt-1 justify-center">
+                                                <button type="button" onClick={() => handleSetDateRange(sku.id, 3)} className="px-2 py-0.5 text-xs bg-gray-200 rounded hover:bg-gray-300 text-black">3m</button>
+                                                <button type="button" onClick={() => handleSetDateRange(sku.id, 6)} className="px-2 py-0.5 text-xs bg-gray-200 rounded hover:bg-gray-300 text-black">6m</button>
+                                                <button type="button" onClick={() => handleSetDateRange(sku.id, 12)} className="px-2 py-0.5 text-xs bg-gray-200 rounded hover:bg-gray-300 text-black">1y</button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 );
                             } else {

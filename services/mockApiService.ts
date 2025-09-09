@@ -8,7 +8,68 @@ let users: User[] = [
   { id: 'USER03', username: 'user', password: 'password', role: UserRole.USER },
 ];
 
-let distributors: Distributor[] = [];
+let distributors: Distributor[] = [
+    { 
+        id: 'VIP-7890-24-AB',
+        name: 'VIP Partners Inc.',
+        phone: '9876547890',
+        state: 'Maharashtra',
+        area: 'Pune',
+        hasSpecialPricing: true,
+        hasSpecialSchemes: true,
+        // Final balance after transactions
+        walletBalance: 23310, 
+        creditUsed: 500,
+        creditLimit: 10000,
+        dateAdded: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        addedByExecId: 'executive',
+    },
+    { 
+        id: 'SCH-1234-24-CD',
+        name: 'Scheme Queen Supplies',
+        phone: '9876541234',
+        state: 'Karnataka',
+        area: 'Bengaluru',
+        hasSpecialPricing: false,
+        hasSpecialSchemes: true,
+        // Final balance after transactions
+        walletBalance: 12400,
+        creditUsed: 1200,
+        creditLimit: 5000,
+        dateAdded: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+        addedByExecId: 'executive',
+    },
+    { 
+        id: 'PRI-5678-24-EF',
+        name: 'Price Saver Wholesale',
+        phone: '9876545678',
+        state: 'Tamil Nadu',
+        area: 'Chennai',
+        hasSpecialPricing: true,
+        hasSpecialSchemes: false,
+        // Final balance after transactions
+        walletBalance: 28200, 
+        creditUsed: 0,
+        creditLimit: 2000,
+        dateAdded: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        addedByExecId: 'executive',
+    },
+    { 
+        id: 'STA-9012-24-GH',
+        name: 'Standard Provisions',
+        phone: '9876549012',
+        state: 'Delhi',
+        area: 'New Delhi',
+        hasSpecialPricing: false,
+        hasSpecialSchemes: false,
+        // Final balance after transactions
+        walletBalance: 4000, 
+        creditUsed: 1800,
+        creditLimit: 2000,
+        dateAdded: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        addedByExecId: 'executive',
+    }
+];
 
 let skus: SKU[] = [
   { id: 'SKU001', name: 'normal 1L', price: 100 },
@@ -18,19 +79,67 @@ let skus: SKU[] = [
   { id: 'SKU005', name: '1L premium', price: 125 },
 ];
 
-let specialPrices: SpecialPrice[] = [];
+let specialPrices: SpecialPrice[] = [
+    // Price for VIP Partners Inc.
+    { id: 'SP001', distributorId: 'VIP-7890-24-AB', skuId: 'SKU005', price: 115, startDate: '2024-01-01', endDate: '2024-12-31' },
+    // Price for Price Saver Wholesale
+    { id: 'SP002', distributorId: 'PRI-5678-24-EF', skuId: 'SKU002', price: 120, startDate: '2024-01-01', endDate: '2024-12-31' },
+];
 
 let schemes: Scheme[] = [
   // Global Scheme
   { id: 'SCHEME01', description: 'Global Deal: Buy 10 normal 1L, Get 1 normal 500ml Free!', buySkuId: 'SKU001', buyQuantity: 10, getSkuId: 'SKU002', getQuantity: 1, isGlobal: true },
+  // Scheme for VIP Partners Inc.
+  { id: 'SCHEME02', description: 'VIP Offer: Buy 5 premium 1L, get 1 premium 1L Free!', buySkuId: 'SKU005', buyQuantity: 5, getSkuId: 'SKU005', getQuantity: 1, isGlobal: false, distributorId: 'VIP-7890-24-AB' },
+  // Scheme for Scheme Queen Supplies
+  { id: 'SCHEME03', description: 'Super Saver: Buy 20 normal 2L, get 3 normal 250ml Free!', buySkuId: 'SKU003', buyQuantity: 20, getSkuId: 'SKU004', getQuantity: 3, isGlobal: false, distributorId: 'SCH-1234-24-CD' },
 ];
 
-let walletTransactions: WalletTransaction[] = [];
-let orders: Order[] = [];
-let orderItems: OrderItem[] = [];
+// --- EXPANDED DUMMY DATA FOR ORDERS AND TRANSACTIONS ---
+
+let walletTransactions: WalletTransaction[] = [
+    // Initial Recharges
+    { id: 'TRN001', distributorId: 'VIP-7890-24-AB', amount: 25000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
+    { id: 'TRN002', distributorId: 'SCH-1234-24-CD', amount: 16000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
+    { id: 'TRN003', distributorId: 'PRI-5678-24-EF', amount: 30000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
+    { id: 'TRN004', distributorId: 'STA-9012-24-GH', amount: 7000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
+
+    // Order Debits (linked to orders below)
+    { id: 'TRN-ORD01', distributorId: 'VIP-7890-24-AB', amount: -690, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+    { id: 'TRN-ORD02', distributorId: 'SCH-1234-24-CD', amount: -2600, creditAmount: -400, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+    { id: 'TRN-ORD03', distributorId: 'STA-9012-24-GH', amount: -1200, creditAmount: -600, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+    { id: 'TRN-ORD04', distributorId: 'PRI-5678-24-EF', amount: -1800, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+];
+
+let orders: Order[] = [
+    { id: 'ORD01', distributorId: 'VIP-7890-24-AB', totalAmount: 690, coveredByWallet: 690, coveredByCredit: 0, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive' },
+    { id: 'ORD02', distributorId: 'SCH-1234-24-CD', totalAmount: 3000, coveredByWallet: 2600, coveredByCredit: 400, date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive' },
+    { id: 'ORD03', distributorId: 'STA-9012-24-GH', totalAmount: 1800, coveredByWallet: 1200, coveredByCredit: 600, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive' },
+    { id: 'ORD04', distributorId: 'PRI-5678-24-EF', totalAmount: 1800, coveredByWallet: 1800, coveredByCredit: 0, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive' },
+];
+
+let orderItems: OrderItem[] = [
+    // Items for ORD01 (VIP Partners - triggers special price and scheme)
+    { orderId: 'ORD01', skuId: 'SKU005', quantity: 6, freeQuantity: 0, unitPrice: 115, isFreebie: false },
+    { orderId: 'ORD01', skuId: 'SKU005', quantity: 1, freeQuantity: 0, unitPrice: 0, isFreebie: true },
+
+    // Items for ORD02 (Scheme Queen - triggers special scheme)
+    { orderId: 'ORD02', skuId: 'SKU003', quantity: 20, freeQuantity: 0, unitPrice: 150, isFreebie: false },
+    { orderId: 'ORD02', skuId: 'SKU004', quantity: 3, freeQuantity: 0, unitPrice: 0, isFreebie: true },
+
+    // Items for ORD03 (Standard Provisions - triggers global scheme)
+    { orderId: 'ORD03', skuId: 'SKU001', quantity: 18, freeQuantity: 0, unitPrice: 100, isFreebie: false },
+    { orderId: 'ORD03', skuId: 'SKU002', quantity: 1, freeQuantity: 0, unitPrice: 0, isFreebie: true },
+
+    // Items for ORD04 (Price Saver - triggers special price)
+    { orderId: 'ORD04', skuId: 'SKU002', quantity: 15, freeQuantity: 0, unitPrice: 120, isFreebie: false },
+];
 
 let notifications: Notification[] = [
+    { id: 'NOTIF001', type: NotificationType.ORDER_PLACED, message: 'New order ORD04 placed for Price Saver Wholesale.', distributorId: 'PRI-5678-24-EF', isRead: false, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()},
+    { id: 'NOTIF002', type: NotificationType.DISTRIBUTOR_ADDED, message: 'New distributor "Standard Provisions" has been onboarded.', distributorId: 'STA-9012-24-GH', isRead: true, date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()},
     { id: 'NOTIF003', type: NotificationType.NEW_SCHEME, message: 'New global scheme available: Buy 10 normal 1L, get 1 normal 500ml free.', isRead: false, date: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
+    { id: 'NOTIF004', type: NotificationType.CREDIT_LIMIT_HIGH, message: 'Standard Provisions has used 90% of their credit limit.', distributorId: 'STA-9012-24-GH', isRead: false, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()},
 ];
 
 
@@ -182,24 +291,23 @@ export const api = {
     const distributor = distributors.find(d => d.id === distributorId);
     if (!distributor) return simulateDelay([]);
 
-    const sortedTransactions = [...walletTransactions]
+    // Get all transactions for the distributor and sort them from oldest to newest
+    const distributorTransactions = [...walletTransactions]
         .filter(t => t.distributorId === distributorId)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Newest to oldest
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const enrichedTransactions: EnrichedWalletTransaction[] = [];
-    let currentBalance = distributor.walletBalance;
+    let runningBalance = 0;
 
-    for (const t of sortedTransactions) {
+    for (const t of distributorTransactions) {
+        runningBalance += t.amount;
         enrichedTransactions.push({
             ...t,
-            balanceAfter: currentBalance,
+            balanceAfter: runningBalance,
         });
-        // To get the balance before this transaction, we reverse the operation.
-        currentBalance -= t.amount;
     }
 
-    // The list is currently newest to oldest, but the UI expects oldest to newest.
-    return simulateDelay(enrichedTransactions.reverse());
+    return simulateDelay(enrichedTransactions);
   },
 
   getOrdersByDistributor: async(distributorId: string): Promise<Order[]> => simulateDelay([...orders].filter(o => o.distributorId === distributorId)),
