@@ -66,7 +66,7 @@ const ManageSchemes: React.FC = () => {
   };
 
   const handleDelete = async (schemeId: string) => {
-      if (userRole && window.confirm('Are you sure you want to delete this scheme?')) {
+      if (userRole && window.confirm('Are you sure you want to delete this global scheme?')) {
           await api.deleteScheme(schemeId, userRole);
           fetchSchemes();
       }

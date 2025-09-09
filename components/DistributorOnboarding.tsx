@@ -84,29 +84,29 @@ const DistributorOnboarding: React.FC = () => {
             })}
             error={errors.phone?.message}
           />
-          <Input
+           <Input
             id="state"
             label="State"
             {...register('state', { required: 'State is required' })}
             error={errors.state?.message}
           />
-          <Input
+        </div>
+         <Input
             id="area"
             label="Area Name"
             {...register('area', { required: 'Area Name is required' })}
             error={errors.area?.message}
           />
-        </div>
         <div className="space-y-4">
             <h3 className="text-sm font-medium text-text-secondary">Special Conditions</h3>
             <div className="flex items-center space-x-8">
                  <label className="flex items-center space-x-2 cursor-pointer">
                     <input type="checkbox" {...register('hasSpecialPricing')} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
-                    <span>Special Prices</span>
+                    <span>Eligible for Special Prices</span>
                  </label>
                  <label className="flex items-center space-x-2 cursor-pointer">
                     <input type="checkbox" {...register('hasSpecialSchemes')} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
-                    <span>Special Schemes</span>
+                    <span>Eligible for Special Schemes</span>
                  </label>
             </div>
         </div>

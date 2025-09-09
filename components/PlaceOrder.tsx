@@ -173,7 +173,10 @@ const PlaceOrder: React.FC = () => {
     setIsLoading(true);
     setStatusMessage(null);
     try {
-      const itemsToSubmit = orderItems.map(({ skuId, quantity }) => ({ skuId, quantity }));
+      const itemsToSubmit = orderItems
+        .filter(i => i.quantity > 0)
+        .map(({ skuId, quantity }) => ({ skuId, quantity }));
+      
       const newOrder = await api.placeOrder(selectedDistributorId, itemsToSubmit, currentUser!.username);
       setStatusMessage({ 
           type: 'success', 
@@ -181,11 +184,13 @@ const PlaceOrder: React.FC = () => {
           orderId: newOrder.id,
       });
       
+      // refetch distributors to get updated wallet/credit balances
       const updatedDistributors = await api.getDistributors();
       setDistributors(updatedDistributors);
       
-      setSelectedDistributorId('');
       setOrderItems([]);
+      // Do not reset distributor selection, user might want to place another order
+      // setSelectedDistributorId(''); 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       setStatusMessage({ type: 'error', text: `Failed to place order: ${errorMessage}` });
@@ -248,7 +253,6 @@ const PlaceOrder: React.FC = () => {
             {orderItems.map((item, index) => (
               <div key={item.id} className="grid grid-cols-12 gap-2 items-center p-2 rounded-md bg-gray-50">
                 <div className="col-span-8">
-                  {/* FIX: Corrected typo in function call from handleItemchange to handleItemChange. */}
                   <Select id={`sku-${index}`} label="" value={item.skuId} onChange={(e) => handleItemChange(item.id, 'skuId', e.target.value)} className="text-sm">
                     {skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </Select>

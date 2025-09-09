@@ -70,7 +70,7 @@ const OrderHistory: React.FC = () => {
                   <td className="p-3 text-black">₹{order.coveredByCredit.toLocaleString()}</td>
                 </tr>
                 {expandedOrderId === order.id && (
-                  <tr className="bg-blue-50">
+                  <tr className="bg-blue-50/50">
                     <td colSpan={7} className="p-4">
                       <OrderDetails orderId={order.id} />
                     </td>
@@ -106,18 +106,18 @@ const OrderDetails: React.FC<{ orderId: string }> = ({ orderId }) => {
                 <thead>
                     <tr className="text-left border-b">
                         <th className="p-2">Product</th>
-                        <th className="p-2">Quantity</th>
-                        <th className="p-2">Unit Price</th>
-                        <th className="p-2">Subtotal</th>
+                        <th className="p-2 text-center">Quantity</th>
+                        <th className="p-2 text-right">Unit Price</th>
+                        <th className="p-2 text-right">Subtotal</th>
                     </tr>
                 </thead>
                 <tbody>
                     {items.map((item, index) => (
                         <tr key={index} className={`border-b last:border-none ${item.isFreebie ? 'bg-green-50' : ''}`}>
                             <td className="p-2">{item.skuName} {item.isFreebie && <Gift size={12} className="inline ml-1 text-green-700"/>}</td>
-                            <td className="p-2">{item.quantity}</td>
-                            <td className="p-2">₹{item.unitPrice.toLocaleString()}</td>
-                            <td className="p-2 font-semibold">₹{(item.quantity * item.unitPrice).toLocaleString()}</td>
+                            <td className="p-2 text-center">{item.quantity}</td>
+                            <td className="p-2 text-right">₹{item.unitPrice.toLocaleString()}</td>
+                            <td className="p-2 font-semibold text-right">₹{(item.quantity * item.unitPrice).toLocaleString()}</td>
                         </tr>
                     ))}
                 </tbody>

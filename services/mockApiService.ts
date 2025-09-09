@@ -8,28 +8,21 @@ let users: User[] = [
   { id: 'USER03', username: 'user', password: 'password', role: UserRole.USER },
 ];
 
-let distributors: Distributor[] = [
-  { id: 'SHA-1234-24-AB', name: 'Shankar Traders', phone: '9876541234', state: 'Maharashtra', area: 'Mumbai', creditLimit: 50000, creditUsed: 45000, walletBalance: 15000, dateAdded: '2024-01-10', addedByExecId: 'EXEC01', hasSpecialPricing: false, hasSpecialSchemes: true },
-  { id: 'GUP-5678-24-CD', name: 'Gupta Enterprises', phone: '9876545678', state: 'Delhi', area: 'Chandni Chowk', creditLimit: 100000, creditUsed: 0, walletBalance: 25000, dateAdded: '2024-02-15', addedByExecId: 'EXEC01', hasSpecialPricing: false, hasSpecialSchemes: false },
-  { id: 'VER-9012-24-EF', name: 'Verma Distribution', phone: '9876549012', state: 'Uttar Pradesh', area: 'Lucknow', creditLimit: 75000, creditUsed: 75000, walletBalance: 5000, dateAdded: '2024-03-20', addedByExecId: 'EXEC02', hasSpecialPricing: true, hasSpecialSchemes: false },
-];
+let distributors: Distributor[] = [];
 
 let skus: SKU[] = [
-  { id: 'SKU001', name: 'Classic Biscuits', price: 10 },
-  { id: 'SKU002', name: 'Cream Wafers', price: 20 },
-  { id: 'SKU003', name: 'Salted Crackers', price: 15 },
-  { id: 'SKU004', name: 'Chocolate Cookies', price: 25 },
+  { id: 'SKU001', name: 'normal 1L', price: 100 },
+  { id: 'SKU002', name: 'normal 500ml', price: 135 },
+  { id: 'SKU003', name: 'normal 2L', price: 150 },
+  { id: 'SKU004', name: 'normal 250ml', price: 160 },
+  { id: 'SKU005', name: '1L premium', price: 125 },
 ];
 
-let specialPrices: SpecialPrice[] = [
-    { id: 'SP001', distributorId: 'VER-9012-24-EF', skuId: 'SKU004', price: 22, startDate: '2024-01-01', endDate: '2024-12-31' },
-];
+let specialPrices: SpecialPrice[] = [];
 
 let schemes: Scheme[] = [
   // Global Scheme
-  { id: 'SCHEME01', description: 'Global Deal: Buy 10 Classic Biscuits, Get 1 Free!', buySkuId: 'SKU001', buyQuantity: 10, getSkuId: 'SKU001', getQuantity: 1, isGlobal: true },
-  // Distributor-specific scheme
-  { id: 'SCHEME02', description: 'Shankar Exclusive: Buy 5 Cream Wafers, get 1 Salted Cracker free', buySkuId: 'SKU002', buyQuantity: 5, getSkuId: 'SKU003', getQuantity: 1, isGlobal: false, distributorId: 'SHA-1234-24-AB' },
+  { id: 'SCHEME01', description: 'Global Deal: Buy 10 normal 1L, Get 1 normal 500ml Free!', buySkuId: 'SKU001', buyQuantity: 10, getSkuId: 'SKU002', getQuantity: 1, isGlobal: true },
 ];
 
 let walletTransactions: WalletTransaction[] = [];
@@ -37,13 +30,7 @@ let orders: Order[] = [];
 let orderItems: OrderItem[] = [];
 
 let notifications: Notification[] = [
-    { id: 'NOTIF006', type: NotificationType.CREDIT_LIMIT_HIGH, message: 'Verma Distribution has used 100% of their credit limit.', distributorId: 'VER-9012-24-EF', isRead: false, date: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
-    { id: 'NOTIF000', type: NotificationType.CREDIT_LIMIT_HIGH, message: 'Shankar Traders has used 90% of their credit limit.', distributorId: 'SHA-1234-24-AB', isRead: false, date: new Date(Date.now() - 1 * 60 * 1000).toISOString() },
-    { id: 'NOTIF001', type: NotificationType.WALLET_LOW, message: 'Wallet balance for Shankar Traders is low.', distributorId: 'SHA-1234-24-AB', isRead: false, date: new Date(Date.now() - 2 * 60 * 1000).toISOString() },
-    { id: 'NOTIF002', type: NotificationType.ORDER_PLACED, message: 'New order placed for Gupta Enterprises.', distributorId: 'GUP-5678-24-CD', isRead: false, date: new Date(Date.now() - 10 * 60 * 1000).toISOString() },
-    { id: 'NOTIF003', type: NotificationType.NEW_SCHEME, message: 'New scheme available: Buy 10 Get 1 Free on Classic Biscuits.', isRead: false, date: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
-    { id: 'NOTIF004', type: NotificationType.DISTRIBUTOR_ADDED, message: 'New distributor "Ramesh & Sons" has been onboarded.', isRead: true, date: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() },
-    { id: 'NOTIF005', type: NotificationType.ORDER_FAILED, message: 'Order for Verma Distribution failed due to insufficient credit.', distributorId: 'VER-9012-24-EF', isRead: true, date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() },
+    { id: 'NOTIF003', type: NotificationType.NEW_SCHEME, message: 'New global scheme available: Buy 10 normal 1L, get 1 normal 500ml free.', isRead: false, date: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
 ];
 
 
@@ -148,7 +135,11 @@ export const api = {
       return simulateDelay(scheme);
   },
   deleteScheme: async (schemeId: string, actorRole: UserRole): Promise<{success: true}> => {
-      if (actorRole !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
+      // Allow executives to delete distributor-specific schemes, super-admins to delete any.
+      const scheme = schemes.find(s => s.id === schemeId);
+      if (!scheme) throw new Error("Scheme not found");
+      if(actorRole === UserRole.EXECUTIVE && scheme.isGlobal) throw new Error("Permission denied");
+
       schemes = schemes.filter(s => s.id !== schemeId);
       return simulateDelay({success: true});
   },
@@ -308,15 +299,16 @@ export const api = {
             if (timesSchemeApplied > 0) {
                 const getSku = skus.find(s => s.id === scheme.getSkuId);
                 if (getSku) {
+                    const totalFreeQuantity = timesSchemeApplied * scheme.getQuantity;
                     const existingFreebie = freebies.find(f => f.skuId === scheme.getSkuId);
                     if (existingFreebie) {
-                        existingFreebie.quantity += timesSchemeApplied * scheme.getQuantity;
+                        existingFreebie.quantity += totalFreeQuantity;
                     } else {
                         freebies.push({
                             skuId: scheme.getSkuId,
-                            quantity: timesSchemeApplied * scheme.getQuantity,
+                            quantity: totalFreeQuantity,
                             unitPrice: 0,
-                            freeQuantity: 0,
+                            freeQuantity: 0, // This property is legacy, main logic uses isFreebie
                             isFreebie: true,
                         });
                     }

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/mockApiService';
 import { Distributor, Order, WalletTransaction, TransactionType, SpecialPrice, Scheme, SKU, UserRole, EnrichedOrderItem } from '../types';
 import Card from './common/Card';
-import { ArrowLeft, User, Phone, MapPin, Wallet, CreditCard, ShoppingCart, TrendingUp, TrendingDown, Star, Sparkles, PlusCircle, Edit, Save, X, Trash2, ChevronDown, ChevronRight, Gift } from 'lucide-react';
+import { ArrowLeft, User, Phone, MapPin, Wallet, CreditCard, ShoppingCart, TrendingUp, TrendingDown, Star, Sparkles, PlusCircle, Save, X, Trash2, ChevronDown, ChevronRight, Gift, Edit } from 'lucide-react';
 import Button from './common/Button';
 import Input from './common/Input';
 import Select from './common/Select';
@@ -154,8 +154,8 @@ const DistributorDetailsPage: React.FC = () => {
            <div className="overflow-y-auto max-h-96">
             {orders.length > 0 ? (
                 <table className="w-full text-left">
-                  <thead>
-                      <tr className="border-b bg-gray-50">
+                  <thead className="border-b bg-gray-50">
+                      <tr>
                           <th className="p-2 w-10"></th>
                           <th className="p-2 text-sm font-semibold text-black">Order ID</th>
                           <th className="p-2 text-sm font-semibold text-black">Date</th>
@@ -234,77 +234,155 @@ const OrderDetails: React.FC<{ orderId: string }> = ({ orderId }) => {
 
 // --- SpecialPricesManager Sub-component ---
 const SpecialPricesManager: React.FC<{ distributorId: string; initialPrices: SpecialPrice[]; skus: SKU[]; onUpdate: () => void; canEdit: boolean }> = ({ distributorId, initialPrices, skus, onUpdate, canEdit }) => {
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [isAdding, setIsAdding] = useState(false);
-    const [editedPrice, setEditedPrice] = useState<Partial<SpecialPrice>>({});
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedPrices, setEditedPrices] = useState<Record<string, Partial<Omit<SpecialPrice, 'id' | 'distributorId'>>>>({});
     const [error, setError] = useState('');
-    
-    const handleSave = async () => {
-        if (!editedPrice.skuId || !editedPrice.price || !editedPrice.startDate || !editedPrice.endDate) {
-            setError('All fields are required.');
-            return;
-        }
-        setError('');
-        try {
-            if (isAdding) {
-                await api.addSpecialPrice({ distributorId, skuId: editedPrice.skuId, price: editedPrice.price, startDate: editedPrice.startDate, endDate: editedPrice.endDate });
-            } else {
-                await api.updateSpecialPrice(editedPrice as SpecialPrice);
-            }
-            onUpdate();
-            setIsAdding(false);
-            setEditingId(null);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save price.');
-        }
-    };
-    
-    const handleDelete = async (id: string) => {
-        if (window.confirm('Delete this special price?')) {
-            await api.deleteSpecialPrice(id);
-            onUpdate();
-        }
-    }
-    
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      const { name, value } = e.target;
-      setEditedPrice(prev => ({ ...prev, [name]: name === 'price' ? parseFloat(value) : value }));
+
+    const handleEditClick = () => {
+        const priceMap = initialPrices.reduce((acc, price) => {
+            acc[price.skuId] = {
+                price: price.price,
+                startDate: price.startDate,
+                endDate: price.endDate,
+                skuId: price.skuId
+            };
+            return acc;
+        }, {} as Record<string, Partial<Omit<SpecialPrice, 'id' | 'distributorId'>>>);
+        setEditedPrices(priceMap);
+        setIsEditing(true);
     };
 
+    const handleCancel = () => {
+        setIsEditing(false);
+        setEditedPrices({});
+        setError('');
+    };
+
+    const handleSave = async () => {
+        const promises: Promise<any>[] = [];
+        const initialPriceMap = new Map(initialPrices.map(p => [p.skuId, p]));
+
+        let hasError = false;
+        for (const sku of skus) {
+            const edited = editedPrices[sku.id];
+            if (!edited) continue; // Nothing was touched for this SKU
+
+            const hasPrice = edited.price !== undefined && edited.price > 0;
+            const hasStartDate = edited.startDate && edited.startDate.length > 0;
+            const hasEndDate = edited.endDate && edited.endDate.length > 0;
+
+            // validation: if one field is filled, all must be.
+            if ([hasPrice, hasStartDate, hasEndDate].some(Boolean) && ![hasPrice, hasStartDate, hasEndDate].every(Boolean)) {
+                 setError(`Please fill out all fields (Price, Start Date, End Date) for ${sku.name} or clear them all.`);
+                 hasError = true;
+                 break;
+            }
+
+            if (hasPrice && hasStartDate && hasEndDate) {
+                if (new Date(edited.startDate!) > new Date(edited.endDate!)) {
+                    setError(`Start Date cannot be after End Date for ${sku.name}.`);
+                    hasError = true;
+                    break;
+                }
+                const initial = initialPriceMap.get(sku.id);
+                if (initial) {
+                    if (initial.price !== edited.price || initial.startDate !== edited.startDate || initial.endDate !== edited.endDate) {
+                         promises.push(api.updateSpecialPrice({ ...initial, ...edited, price: edited.price! }));
+                    }
+                } else {
+                    promises.push(api.addSpecialPrice({
+                        distributorId,
+                        skuId: sku.id,
+                        price: edited.price!,
+                        startDate: edited.startDate!,
+                        endDate: edited.endDate!,
+                    }));
+                }
+            } else {
+                 const initial = initialPriceMap.get(sku.id);
+                 if (initial) {
+                     promises.push(api.deleteSpecialPrice(initial.id));
+                 }
+            }
+        }
+        
+        if (hasError) return;
+
+        setError('');
+        await Promise.all(promises);
+        onUpdate();
+        setIsEditing(false);
+    };
+
+    const handleInputChange = (skuId: string, field: 'price' | 'startDate' | 'endDate', value: string) => {
+        setEditedPrices(prev => ({
+            ...prev,
+            [skuId]: {
+                ...prev[skuId],
+                skuId: skuId,
+                [field]: field === 'price' ? (parseFloat(value) || undefined) : value,
+            }
+        }));
+    };
+    
     return (
         <Card>
             <div className="flex justify-between items-center mb-4">
                 <h3 className="flex items-center text-lg font-semibold text-black"><Star size={20} className="mr-3 text-yellow-500" />Special Pricing</h3>
-                {canEdit && <Button onClick={() => { setIsAdding(true); setEditingId('new'); setEditedPrice({ skuId: skus[0]?.id || '', price: 0, startDate: '', endDate: '' })}} disabled={isAdding}><PlusCircle size={16} className="mr-2"/> Add Price</Button>}
+                {canEdit && !isEditing && <Button onClick={handleEditClick}><Edit size={16} className="mr-2"/> Manage Prices</Button>}
             </div>
-            {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
-            <table className="w-full text-left">
-                <thead className="bg-gray-50"><tr><th className="p-2">Product</th><th className="p-2">Special Price</th><th className="p-2">Start Date</th><th className="p-2">End Date</th>{canEdit && <th className="p-2 text-right">Actions</th>}</tr></thead>
-                <tbody>
-                    {isAdding && (
-                         <tr className="bg-blue-50">
-                            <td className="p-2"><Select label="" name="skuId" value={editedPrice.skuId} onChange={handleInputChange}>{skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></td>
-                            <td className="p-2"><Input label="" type="number" name="price" value={editedPrice.price || ''} onChange={handleInputChange} /></td>
-                            <td className="p-2"><Input label="" type="date" name="startDate" value={editedPrice.startDate || ''} onChange={handleInputChange} /></td>
-                            <td className="p-2"><Input label="" type="date" name="endDate" value={editedPrice.endDate || ''} onChange={handleInputChange} /></td>
-                            <td className="p-2 text-right space-x-2"><Button onClick={handleSave} size="sm" className="p-2"><Save size={16}/></Button><Button onClick={() => setIsAdding(false)} variant="secondary" size="sm" className="p-2"><X size={16}/></Button></td>
+            
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+            
+            <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="p-3">Product</th>
+                            <th className="p-3 text-center">Default Price</th>
+                            <th className="p-3 text-center">{isEditing ? 'Special Price (₹)' : 'Special Price'}</th>
+                            {isEditing && <>
+                                <th className="p-3 text-center">Start Date</th>
+                                <th className="p-3 text-center">End Date</th>
+                            </>}
                         </tr>
-                    )}
-                    {initialPrices.map(p => (
-                        editingId === p.id ? (
-                            <tr key={p.id} className="bg-blue-50">...</tr>
-                        ) : (
-                            <tr key={p.id} className="border-b">
-                                <td className="p-2">{skus.find(s => s.id === p.skuId)?.name}</td>
-                                <td className="p-2 font-semibold">₹{p.price.toLocaleString()}</td>
-                                <td className="p-2">{p.startDate}</td>
-                                <td className="p-2">{p.endDate}</td>
-                                {canEdit && <td className="p-2 text-right"><Button onClick={() => handleDelete(p.id)} variant="danger" size="sm" className="p-2"><Trash2 size={16}/></Button></td>}
-                            </tr>
-                        )
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {skus.map(sku => {
+                            if (isEditing) {
+                                const edited = editedPrices[sku.id] || {};
+                                return (
+                                    <tr key={sku.id} className="border-b">
+                                        <td className="p-2 font-medium">{sku.name}</td>
+                                        <td className="p-2 text-center">₹{sku.price.toLocaleString()}</td>
+                                        <td className="p-2"><Input label="" type="number" placeholder="Default" value={edited.price ?? ''} onChange={(e) => handleInputChange(sku.id, 'price', e.target.value)} /></td>
+                                        <td className="p-2"><Input label="" type="date" value={edited.startDate ?? ''} onChange={(e) => handleInputChange(sku.id, 'startDate', e.target.value)} /></td>
+                                        <td className="p-2"><Input label="" type="date" value={edited.endDate ?? ''} onChange={(e) => handleInputChange(sku.id, 'endDate', e.target.value)} /></td>
+                                    </tr>
+                                );
+                            } else {
+                                const special = initialPrices.find(p => p.skuId === sku.id);
+                                return (
+                                    <tr key={sku.id} className="border-b">
+                                        <td className="p-3 font-medium">{sku.name}</td>
+                                        <td className="p-3 text-center">₹{sku.price.toLocaleString()}</td>
+                                        <td className={`p-3 font-semibold text-center ${special ? 'text-black' : 'text-gray-400'}`}>
+                                            {special ? `₹${special.price.toLocaleString()}` : 'N/A'}
+                                            {special && <p className="text-xs font-normal">({special.startDate} to {special.endDate})</p>}
+                                        </td>
+                                    </tr>
+                                )
+                            }
+                        })}
+                    </tbody>
+                </table>
+            </div>
+            {isEditing && (
+                <div className="flex justify-end gap-2 mt-4">
+                    <Button onClick={handleSave} size="sm">Save Changes</Button>
+                    <Button onClick={handleCancel} variant="secondary" size="sm">Cancel</Button>
+                </div>
+            )}
         </Card>
     );
 };
@@ -312,68 +390,138 @@ const SpecialPricesManager: React.FC<{ distributorId: string; initialPrices: Spe
 // --- SpecialSchemesManager Sub-component ---
 const SpecialSchemesManager: React.FC<{ distributorId: string; initialSchemes: Scheme[]; skus: SKU[]; onUpdate: () => void; canEdit: boolean }> = ({ distributorId, initialSchemes, skus, onUpdate, canEdit }) => {
     const { userRole } = useAuth();
-    const [isAdding, setIsAdding] = useState(false);
+    const [editingSchemeId, setEditingSchemeId] = useState<string | null>(null);
     const [editedScheme, setEditedScheme] = useState<Partial<Scheme>>({});
+    const [error, setError] = useState('');
+
+    const handleAddNew = () => {
+        setEditedScheme({
+            buySkuId: skus[0]?.id || '',
+            getSkuId: skus[0]?.id || '',
+            buyQuantity: 1,
+            getQuantity: 1,
+            description: ''
+        });
+        setEditingSchemeId('new');
+    };
+
+    const handleEdit = (scheme: Scheme) => {
+        setEditingSchemeId(scheme.id);
+        setEditedScheme(scheme);
+    };
+
+    const handleCancel = () => {
+        setEditingSchemeId(null);
+        setEditedScheme({});
+        setError('');
+    };
 
     const handleSave = async () => {
         const { description, buySkuId, buyQuantity, getSkuId, getQuantity } = editedScheme;
-        if (!description || !buySkuId || !buyQuantity || !getSkuId || !getQuantity) return;
-        
-        const payload = { description, buySkuId, buyQuantity, getSkuId, getQuantity, isGlobal: false, distributorId };
-        
-        if(isAdding) {
-            await api.addScheme(payload, userRole);
+        if (!description || !buySkuId || !buyQuantity || !getSkuId || !getQuantity || buyQuantity <= 0 || getQuantity <= 0) {
+            setError("All fields are required and quantities must be positive.");
+            return;
         }
-        onUpdate();
-        setIsAdding(false);
-    }
+        setError('');
+        
+        const isAdding = editingSchemeId === 'new';
+
+        try {
+             if (isAdding) {
+                const payload = { description, buySkuId, buyQuantity, getSkuId, getQuantity, isGlobal: false, distributorId };
+                await api.addScheme(payload, userRole!);
+            } else {
+                await api.updateScheme(editedScheme as Scheme, userRole!);
+            }
+            onUpdate();
+            handleCancel();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to save scheme.');
+        }
+    };
     
      const handleDelete = async (id: string) => {
         if (window.confirm('Delete this special scheme?')) {
-            await api.deleteScheme(id, userRole);
+            await api.deleteScheme(id, userRole!);
             onUpdate();
         }
-    }
+    };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const { name, value } = e.target;
       const isNumeric = ['buyQuantity', 'getQuantity'].includes(name);
-      setEditedScheme(prev => ({ ...prev, [name]: isNumeric ? parseInt(value) : value }));
+      setEditedScheme(prev => ({ ...prev, [name]: isNumeric ? parseInt(value) || 0 : value }));
     };
+
+    const getSkuName = (id?: string) => skus.find(sku => sku.id === id)?.name || 'N/A';
+
+    const renderEditRow = (isNew: boolean) => (
+        <tr className="bg-blue-50">
+            <td className="p-2"><Input label="" name="description" placeholder="e.g., Monsoon Bonanza" value={editedScheme.description || ''} onChange={handleInputChange} /></td>
+            <td className="p-2">
+                <div className="flex gap-2 items-center">
+                    <Input label="" type="number" name="buyQuantity" value={editedScheme.buyQuantity || ''} onChange={handleInputChange} className="w-20" />
+                    <span>x</span>
+                    <Select label="" name="buySkuId" value={editedScheme.buySkuId} onChange={handleInputChange}>{skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
+                </div>
+            </td>
+            <td className="p-2">
+                <div className="flex gap-2 items-center">
+                    <Input label="" type="number" name="getQuantity" value={editedScheme.getQuantity || ''} onChange={handleInputChange} className="w-20" />
+                    <span>x</span>
+                    <Select label="" name="getSkuId" value={editedScheme.getSkuId} onChange={handleInputChange}>{skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
+                </div>
+            </td>
+            <td className="p-2 text-right space-x-2">
+                <Button onClick={handleSave} size="sm" className="p-2"><Save size={16} /></Button>
+                <Button onClick={handleCancel} variant="secondary" size="sm" className="p-2"><X size={16} /></Button>
+            </td>
+        </tr>
+    );
 
     return (
         <Card>
             <div className="flex justify-between items-center mb-4">
                 <h3 className="flex items-center text-lg font-semibold text-black"><Sparkles size={20} className="mr-3 text-blue-500" />Special Schemes</h3>
-                {canEdit && <Button onClick={() => setIsAdding(true)} disabled={isAdding}><PlusCircle size={16} className="mr-2"/> Add Scheme</Button>}
+                {canEdit && <Button onClick={handleAddNew} disabled={!!editingSchemeId}><PlusCircle size={16} className="mr-2"/> Add Scheme</Button>}
             </div>
-            {isAdding && (
-                <div className="p-4 bg-blue-50 rounded-lg mb-4 space-y-4">
-                    <Input label="Description" name="description" onChange={handleInputChange} />
-                    <div className="grid grid-cols-2 gap-4">
-                        <Select label="Buy SKU" name="buySkuId" onChange={handleInputChange}>{skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
-                        <Input label="Buy Quantity" name="buyQuantity" type="number" onChange={handleInputChange} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <Select label="Get SKU (Free)" name="getSkuId" onChange={handleInputChange}>{skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
-                        <Input label="Get Quantity" name="getQuantity" type="number" onChange={handleInputChange} />
-                    </div>
-                    <div className="flex justify-end gap-2"><Button onClick={handleSave} size="sm">Save</Button><Button onClick={() => setIsAdding(false)} variant="secondary" size="sm">Cancel</Button></div>
-                </div>
-            )}
-            <table className="w-full text-left">
-                 <thead className="bg-gray-50"><tr><th className="p-2">Description</th><th className="p-2">Buy</th><th className="p-2">Get Free</th>{canEdit && <th className="p-2 text-right">Actions</th>}</tr></thead>
-                 <tbody>
-                    {initialSchemes.map(s => (
-                        <tr key={s.id} className="border-b">
-                            <td className="p-2 w-1/2">{s.description}</td>
-                            <td className="p-2">{s.buyQuantity} x {skus.find(sku => sku.id === s.buySkuId)?.name}</td>
-                            <td className="p-2">{s.getQuantity} x {skus.find(sku => sku.id === s.getSkuId)?.name}</td>
-                            {canEdit && <td className="p-2 text-right"><Button onClick={() => handleDelete(s.id)} variant="danger" size="sm" className="p-2"><Trash2 size={16}/></Button></td>}
+            {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+            
+            <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="p-3 w-1/3">Description</th>
+                            <th className="p-3">Buy</th>
+                            <th className="p-3">Get Free</th>
+                            {canEdit && <th className="p-3 text-right">Actions</th>}
                         </tr>
-                    ))}
-                 </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {editingSchemeId === 'new' && renderEditRow(true)}
+                        {initialSchemes.map(s => (
+                             editingSchemeId === s.id
+                             ? renderEditRow(false)
+                             : (
+                                <tr key={s.id} className="border-b">
+                                    <td className="p-3">{s.description}</td>
+                                    <td className="p-3">{s.buyQuantity} x {getSkuName(s.buySkuId)}</td>
+                                    <td className="p-3">{s.getQuantity} x {getSkuName(s.getSkuId)}</td>
+                                    {canEdit && 
+                                        <td className="p-3 text-right space-x-2">
+                                            <Button onClick={() => handleEdit(s)} variant="secondary" size="sm" className="p-2" disabled={!!editingSchemeId}><Edit size={16}/></Button>
+                                            <Button onClick={() => handleDelete(s.id)} variant="danger" size="sm" className="p-2" disabled={!!editingSchemeId}><Trash2 size={16}/></Button>
+                                        </td>
+                                    }
+                                </tr>
+                            )
+                        ))}
+                        {initialSchemes.length === 0 && editingSchemeId !== 'new' && (
+                            <tr><td colSpan={canEdit ? 4 : 3} className="text-center p-4 text-gray-500">No special schemes assigned to this distributor.</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </Card>
     );
 }
