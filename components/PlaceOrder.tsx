@@ -85,7 +85,9 @@ const PlaceOrder: React.FC = () => {
 
     const today = new Date().toISOString().split('T')[0];
     const activeSpecialPrices = distributorPrices.filter(p => p.startDate <= today && p.endDate >= today);
-    const applicableSchemes = [...distributorSchemes, ...globalSchemes];
+    
+    // If a distributor has their own schemes, only those apply. Otherwise, global schemes apply.
+    const applicableSchemes = distributorSchemes.length > 0 ? distributorSchemes : globalSchemes;
 
     // Calculate paid items and their prices
     orderItems.forEach(item => {

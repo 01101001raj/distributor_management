@@ -1,4 +1,4 @@
-import { Distributor, SKU, Scheme, WalletTransaction, TransactionType, Order, OrderItem, UserRole, Notification, NotificationType, EnrichedOrderItem, User, SpecialPrice, InvoiceData } from '../types';
+import { Distributor, SKU, Scheme, WalletTransaction, TransactionType, Order, OrderItem, UserRole, Notification, NotificationType, EnrichedOrderItem, User, SpecialPrice, InvoiceData, EnrichedWalletTransaction } from '../types';
 import { DEFAULT_CREDIT_LIMIT } from '../config';
 
 // --- MOCK DATABASE (Simulating Google Sheets) ---
@@ -177,7 +177,31 @@ export const api = {
       return simulateDelay(enrichedItems);
   },
   getWalletTransactions: async(): Promise<WalletTransaction[]> => simulateDelay([...walletTransactions]),
-  getWalletTransactionsByDistributor: async(distributorId: string): Promise<WalletTransaction[]> => simulateDelay([...walletTransactions].filter(t => t.distributorId === distributorId)),
+  
+  getWalletTransactionsByDistributor: async(distributorId: string): Promise<EnrichedWalletTransaction[]> => {
+    const distributor = distributors.find(d => d.id === distributorId);
+    if (!distributor) return simulateDelay([]);
+
+    const sortedTransactions = [...walletTransactions]
+        .filter(t => t.distributorId === distributorId)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Newest to oldest
+
+    const enrichedTransactions: EnrichedWalletTransaction[] = [];
+    let currentBalance = distributor.walletBalance;
+
+    for (const t of sortedTransactions) {
+        enrichedTransactions.push({
+            ...t,
+            balanceAfter: currentBalance,
+        });
+        // To get the balance before this transaction, we reverse the operation.
+        currentBalance -= t.amount;
+    }
+
+    // The list is currently newest to oldest, but the UI expects oldest to newest.
+    return simulateDelay(enrichedTransactions.reverse());
+  },
+
   getOrdersByDistributor: async(distributorId: string): Promise<Order[]> => simulateDelay([...orders].filter(o => o.distributorId === distributorId)),
   getNotifications: async (): Promise<Notification[]> => simulateDelay([...notifications].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())),
     
@@ -267,7 +291,12 @@ export const api = {
     const distributorPrices = specialPrices.filter(sp => 
         sp.distributorId === distributorId && sp.startDate <= today && sp.endDate >= today
     );
-    const applicableSchemes = schemes.filter(s => s.isGlobal || s.distributorId === distributorId);
+
+    // Check for distributor-specific schemes. If they exist, use them exclusively. Otherwise, use global schemes.
+    const distributorSpecificSchemes = schemes.filter(s => s.distributorId === distributorId);
+    const applicableSchemes = distributorSpecificSchemes.length > 0 
+        ? distributorSpecificSchemes
+        : schemes.filter(s => s.isGlobal);
 
     // 2. Process paid items and calculate cost
     for (const item of items) {
@@ -370,6 +399,7 @@ export const api = {
             id: generateId('TRN'),
             distributorId,
             amount: -paidByWallet,
+            creditAmount: paidByCredit > 0 ? -paidByCredit : undefined,
             type: TransactionType.ORDER_DEBIT,
             date: new Date().toISOString(),
             addedBy: placedByExecId,

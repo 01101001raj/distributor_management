@@ -1,13 +1,29 @@
+// FIX: Replaced incorrect content with proper type definitions to resolve circular dependency and export errors.
+
 export enum UserRole {
   SUPER_ADMIN = 'Super Admin',
   EXECUTIVE = 'Executive',
   USER = 'User',
 }
 
+export enum TransactionType {
+  RECHARGE = 'RECHARGE',
+  ORDER_DEBIT = 'ORDER_DEBIT',
+}
+
+export enum NotificationType {
+  WALLET_LOW = 'WALLET_LOW',
+  ORDER_PLACED = 'ORDER_PLACED',
+  ORDER_FAILED = 'ORDER_FAILED',
+  NEW_SCHEME = 'NEW_SCHEME',
+  DISTRIBUTOR_ADDED = 'DISTRIBUTOR_ADDED',
+  CREDIT_LIMIT_HIGH = 'CREDIT_LIMIT_HIGH',
+}
+
 export interface User {
   id: string;
   username: string;
-  password: string; // In a real app, this would be a hash
+  password?: string;
   role: UserRole;
 }
 
@@ -17,29 +33,29 @@ export interface Distributor {
   phone: string;
   state: string;
   area: string;
-  creditLimit: number;
-  creditUsed: number;
-  walletBalance: number;
   hasSpecialPricing: boolean;
   hasSpecialSchemes: boolean;
   agreementUrl?: string;
+  walletBalance: number;
+  creditUsed: number;
+  creditLimit: number;
   dateAdded: string;
   addedByExecId: string;
 }
 
 export interface SKU {
   id: string;
-  name:string;
+  name: string;
   price: number;
 }
 
 export interface SpecialPrice {
-    id: string;
-    distributorId: string;
-    skuId: string;
-    price: number;
-    startDate: string;
-    endDate: string;
+  id: string;
+  distributorId: string;
+  skuId: string;
+  price: number;
+  startDate: string;
+  endDate: string;
 }
 
 export interface Scheme {
@@ -53,22 +69,22 @@ export interface Scheme {
   distributorId?: string;
 }
 
-export enum TransactionType {
-  ORDER_DEBIT = 'ORDER_DEBIT',
-  RECHARGE = 'RECHARGE'
-}
-
 export interface WalletTransaction {
   id: string;
   distributorId: string;
   amount: number;
+  creditAmount?: number;
   type: TransactionType;
   date: string;
   addedBy: string;
 }
 
+export interface EnrichedWalletTransaction extends WalletTransaction {
+  balanceAfter: number;
+}
+
 export interface Order {
-  id:string;
+  id: string;
   distributorId: string;
   totalAmount: number;
   coveredByWallet: number;
@@ -81,22 +97,13 @@ export interface OrderItem {
   orderId: string;
   skuId: string;
   quantity: number;
-  freeQuantity: number; // For "buy A get A" simple schemes
+  freeQuantity: number; // This property is legacy, main logic uses isFreebie
   unitPrice: number;
-  isFreebie: boolean; // For "buy A get B" schemes
+  isFreebie: boolean;
 }
 
 export interface EnrichedOrderItem extends OrderItem {
   skuName: string;
-}
-
-export enum NotificationType {
-  WALLET_LOW = 'WALLET_LOW',
-  ORDER_PLACED = 'ORDER_PLACED',
-  ORDER_FAILED = 'ORDER_FAILED',
-  NEW_SCHEME = 'NEW_SCHEME',
-  DISTRIBUTOR_ADDED = 'DISTRIBUTOR_ADDED',
-  CREDIT_LIMIT_HIGH = 'CREDIT_LIMIT_HIGH',
 }
 
 export interface Notification {
@@ -109,7 +116,7 @@ export interface Notification {
 }
 
 export interface InvoiceData {
-  order: Order;
-  distributor: Distributor;
-  items: EnrichedOrderItem[];
+    order: Order;
+    distributor: Distributor;
+    items: EnrichedOrderItem[];
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/mockApiService';
-import { Distributor, Order, WalletTransaction, TransactionType, SpecialPrice, Scheme, SKU, UserRole, EnrichedOrderItem } from '../types';
+import { Distributor, Order, WalletTransaction, TransactionType, SpecialPrice, Scheme, SKU, UserRole, EnrichedOrderItem, EnrichedWalletTransaction } from '../types';
 import Card from './common/Card';
 import { ArrowLeft, User, Phone, MapPin, Wallet, CreditCard, ShoppingCart, TrendingUp, TrendingDown, Star, Sparkles, PlusCircle, Save, X, Trash2, ChevronDown, ChevronRight, Gift, Edit } from 'lucide-react';
 import Button from './common/Button';
@@ -14,7 +14,7 @@ const DistributorDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const [distributor, setDistributor] = useState<Distributor | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [transactions, setTransactions] = useState<EnrichedWalletTransaction[]>([]);
   const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([]);
   const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [skus, setSkus] = useState<SKU[]>([]);
@@ -47,7 +47,7 @@ const DistributorDetailsPage: React.FC = () => {
         } else {
           setDistributor(distributorData);
           setOrders(ordersData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-          setTransactions(transactionsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+          setTransactions(transactionsData); // API now returns sorted oldest to newest
           setSpecialPrices(specialPricesData);
           setSchemes(schemesData);
           setSkus(skusData);
@@ -131,20 +131,34 @@ const DistributorDetailsPage: React.FC = () => {
           <h3 className="flex items-center text-lg font-semibold mb-4 text-black"><Wallet size={20} className="mr-3 text-black" />Wallet Transactions</h3>
           <div className="overflow-y-auto max-h-96">
             {transactions.length > 0 ? (
-                <ul className="space-y-3">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 text-xs uppercase">
+                    <tr>
+                      <th className="p-2 font-semibold text-black">Date</th>
+                      <th className="p-2 font-semibold text-black">Type</th>
+                      <th className="p-2 font-semibold text-black text-right">Wallet</th>
+                      <th className="p-2 font-semibold text-black text-right">Credit</th>
+                      <th className="p-2 font-semibold text-black text-right">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {transactions.map(t => (
-                        <li key={t.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                            <div className="flex items-center">
-                                {t.type === TransactionType.RECHARGE ? <TrendingUp size={20} className="text-black mr-3"/> : <TrendingDown size={20} className="text-black mr-3"/>}
-                                <div>
-                                    <p className="font-semibold capitalize">{t.type.replace('_', ' ').toLowerCase()}</p>
-                                    <p className="text-xs text-text-secondary">{new Date(t.date).toLocaleString()}</p>
-                                </div>
-                            </div>
-                            <p className={`font-bold text-lg text-black`}>{t.type === TransactionType.RECHARGE ? '+' : ''}₹{Math.abs(t.amount).toLocaleString()}</p>
-                        </li>
+                      <tr key={t.id} className="border-b last:border-0 text-sm">
+                        <td className="p-2 text-xs text-text-secondary">{new Date(t.date).toLocaleString()}</td>
+                        <td className="p-2 capitalize font-medium">{t.type.replace('_', ' ').toLowerCase()}</td>
+                        <td className={`p-2 font-semibold text-right ${t.amount >= 0 ? 'text-black' : 'text-black'}`}>
+                          {t.amount >= 0 ? '+' : ''}₹{t.amount.toLocaleString()}
+                        </td>
+                        <td className="p-2 font-semibold text-right text-black">
+                          {t.creditAmount ? `₹${Math.abs(t.creditAmount).toLocaleString()}` : '-'}
+                        </td>
+                        <td className="p-2 font-bold text-right text-black">
+                          ₹{t.balanceAfter.toLocaleString()}
+                        </td>
+                      </tr>
                     ))}
-                </ul>
+                  </tbody>
+                </table>
             ) : <p className="text-center text-black py-4">No wallet transactions found.</p>}
           </div>
         </Card>
