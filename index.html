@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Distributor Management Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'primary': '#000000',
+              'primary-hover': '#1F2937',
+              'secondary': '#93C5FD',
+              'accent': '#F59E0B',
+              'background': '#F3F4F6',
+              'card': '#FFFFFF',
+              'text-primary': '#000000',
+              'text-secondary': '#000000',
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+    "react/": "https://esm.sh/react@^19.1.1/",
+    "react": "https://esm.sh/react@^19.1.1",
+    "recharts": "https://esm.sh/recharts@^3.1.2",
+    "lucide-react": "https://esm.sh/lucide-react@^0.539.0",
+    "react-hook-form": "https://esm.sh/react-hook-form@^7.62.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.8.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-background">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
