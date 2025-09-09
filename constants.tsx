@@ -1,12 +1,13 @@
 import React from 'react';
 import { UserRole } from './types';
-import { LayoutDashboard, UserPlus, ShoppingCart, Wallet, ListOrdered, Boxes, Bell, Users, Sparkles } from 'lucide-react';
+import { LayoutDashboard, UserPlus, ShoppingCart, Wallet, ListOrdered, Boxes, Bell, Users, Sparkles, TrendingUp } from 'lucide-react';
 
 export const ROLES = [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE, UserRole.USER];
 
 export const NAVIGATION_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE, UserRole.USER] },
   { path: '/orders', label: 'Order History', icon: <ListOrdered size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE, UserRole.USER] },
+  { path: '/sales', label: 'Sales', icon: <TrendingUp size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE, UserRole.USER] },
   { path: '/notifications', label: 'Notifications', icon: <Bell size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE, UserRole.USER] },
   { path: '/add-distributor', label: 'Add Distributor', icon: <UserPlus size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE] },
   { path: '/place-order', label: 'Place Order', icon: <ShoppingCart size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE] },

@@ -1,3 +1,6 @@
+
+
+
 import React, { useEffect, useState, useCallback } from 'react';
 import Card from './common/Card';
 import Button from './common/Button';
@@ -6,7 +9,10 @@ import Select from './common/Select';
 import { api } from '../services/mockApiService';
 import { Scheme, SKU, UserRole } from '../types';
 import { useAuth } from '../hooks/useAuth';
-import { PlusCircle, Edit, Save, X, Trash2, ArrowRight } from 'lucide-react';
+import { PlusCircle, Edit, Save, X, Trash2 } from 'lucide-react';
+import { useForm, SubmitHandler } from 'react-hook-form';
+
+type SchemeFormInputs = Omit<Scheme, 'id' | 'isGlobal' | 'distributorId'>;
 
 const ManageSchemes: React.FC = () => {
   const { userRole } = useAuth();
@@ -14,7 +20,10 @@ const ManageSchemes: React.FC = () => {
   const [skus, setSkus] = useState<SKU[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingSchemeId, setEditingSchemeId] = useState<string | null>(null);
-  const [editedScheme, setEditedScheme] = useState<Partial<Scheme>>({});
+
+  const { register, handleSubmit, formState: { errors, isValid }, reset } = useForm<SchemeFormInputs>({
+    mode: 'onBlur'
+  });
 
   const fetchSchemes = useCallback(() => {
     setLoading(true);
@@ -31,36 +40,30 @@ const ManageSchemes: React.FC = () => {
 
   const handleEdit = (scheme: Scheme) => {
     setEditingSchemeId(scheme.id);
-    setEditedScheme(scheme);
+    reset(scheme);
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   };
 
   const handleCancel = () => {
     setEditingSchemeId(null);
-    setEditedScheme({});
+    reset({});
   };
 
-  const handleSave = async () => {
+  const onSave: SubmitHandler<SchemeFormInputs> = async (data) => {
     if (!userRole) return;
-
-    const { description, buySkuId, buyQuantity, getSkuId, getQuantity } = editedScheme;
-    if (!description || !buySkuId || !buyQuantity || !getSkuId || !getQuantity) {
-        alert("Please fill all fields");
-        return;
-    }
-
     setLoading(true);
     try {
       if (editingSchemeId === 'new') {
-        await api.addScheme({ description, buySkuId, buyQuantity, getSkuId, getQuantity, isGlobal: true }, userRole);
+        await api.addScheme({ ...data, isGlobal: true }, userRole);
       } else {
-        await api.updateScheme(editedScheme as Scheme, userRole);
+        await api.updateScheme({ ...data, id: editingSchemeId!, isGlobal: true }, userRole);
       }
       fetchSchemes();
       handleCancel();
     } catch (err) {
       console.error("Failed to save scheme:", err);
-      setLoading(false);
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -71,23 +74,16 @@ const ManageSchemes: React.FC = () => {
       }
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    const isNumeric = ['buyQuantity', 'getQuantity'].includes(name);
-    setEditedScheme(prev => ({ ...prev, [name]: isNumeric ? parseInt(value) || 0 : value }));
-  };
-
   const handleAddNew = () => {
-    setEditedScheme({
+    reset({
       description: '',
       buySkuId: skus[0]?.id || '',
       buyQuantity: 10,
       getSkuId: skus[0]?.id || '',
       getQuantity: 1,
-      isGlobal: true
     });
     setEditingSchemeId('new');
-     setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
   };
 
   if (userRole !== UserRole.SUPER_ADMIN) {
@@ -102,64 +98,81 @@ const ManageSchemes: React.FC = () => {
 
   const renderEditor = () => (
       <Card className="mt-6 border-t-4 border-primary">
-          <h3 className="text-xl font-bold mb-4">{editingSchemeId === 'new' ? 'Create New Global Scheme' : 'Edit Global Scheme'}</h3>
-          <div className="space-y-6">
-              <Input 
-                label="Scheme Description"
-                name="description"
-                placeholder="e.g., Summer Bonanza Offer"
-                value={editedScheme.description || ''}
-                onChange={handleInputChange} 
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  <Card className="bg-gray-50">
-                      <h4 className="font-semibold mb-2 text-text-primary">Condition (Buy)</h4>
-                      <div className="flex gap-4">
-                           <Input label="Quantity" type="number" name="buyQuantity" value={editedScheme.buyQuantity || ''} onChange={handleInputChange} className="w-24"/>
-                           <Select label="Product" name="buySkuId" value={editedScheme.buySkuId} onChange={handleInputChange}>{skus.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</Select>
-                      </div>
-                  </Card>
-                  
-                   <Card className="bg-green-50">
-                      <h4 className="font-semibold mb-2 text-text-primary">Reward (Get Free)</h4>
-                       <div className="flex gap-4">
-                           <Input label="Quantity" type="number" name="getQuantity" value={editedScheme.getQuantity || ''} onChange={handleInputChange} className="w-24"/>
-                           <Select label="Product" name="getSkuId" value={editedScheme.getSkuId} onChange={handleInputChange}>{skus.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</Select>
-                      </div>
-                  </Card>
-              </div>
+          <form onSubmit={handleSubmit(onSave)}>
+            <h3 className="text-xl font-bold mb-4">{editingSchemeId === 'new' ? 'Create New Global Scheme' : 'Edit Global Scheme'}</h3>
+            <div className="space-y-6">
+                <Input 
+                  label="Scheme Description"
+                  placeholder="e.g., Summer Bonanza Offer"
+                  {...register('description', { required: 'Description is required' })}
+                  error={errors.description?.message}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    <Card className="bg-background">
+                        <h4 className="font-semibold mb-2 text-text-primary">Condition (Buy)</h4>
+                        <div className="flex gap-4">
+                             <Input 
+                               label="Quantity" 
+                               type="number" 
+                               className="w-24"
+                               {...register('buyQuantity', { required: 'Required', valueAsNumber: true, min: { value: 1, message: 'Min 1' } })}
+                               error={errors.buyQuantity?.message}
+                             />
+                             <Select label="Product" {...register('buySkuId', { required: true })}>
+                                 {skus.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                             </Select>
+                        </div>
+                    </Card>
+                    
+                     <Card className="bg-green-50 border-green-200">
+                        <h4 className="font-semibold mb-2 text-text-primary">Reward (Get Free)</h4>
+                         <div className="flex gap-4">
+                             <Input 
+                                label="Quantity" 
+                                type="number" 
+                                className="w-24"
+                                {...register('getQuantity', { required: 'Required', valueAsNumber: true, min: { value: 1, message: 'Min 1' } })}
+                                error={errors.getQuantity?.message}
+                             />
+                             <Select label="Product" {...register('getSkuId', { required: true })}>
+                                 {skus.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                             </Select>
+                        </div>
+                    </Card>
+                </div>
 
-              <div className="flex justify-end gap-4 pt-4">
-                <Button onClick={handleSave} size="md" isLoading={loading}>
-                  <Save size={16} className="mr-2"/> Save Scheme
-                </Button>
-                <Button onClick={handleCancel} variant="secondary" size="md">
-                  <X size={16} className="mr-2"/> Cancel
-                </Button>
-              </div>
-          </div>
+                <div className="flex justify-end gap-4 pt-4">
+                  <Button type="submit" size="md" isLoading={loading} disabled={!isValid}>
+                    <Save size={16} className="mr-2"/> Save Scheme
+                  </Button>
+                  <Button type="button" onClick={handleCancel} variant="secondary" size="md">
+                    <X size={16} className="mr-2"/> Cancel
+                  </Button>
+                </div>
+            </div>
+          </form>
       </Card>
   );
 
   return (
     <>
       <Card>
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <h2 className="text-2xl font-bold">Manage Global Schemes</h2>
-          <Button onClick={handleAddNew} disabled={!!editingSchemeId}><PlusCircle size={16} className="mr-2" /> Add New Scheme</Button>
+          <Button onClick={handleAddNew} disabled={!!editingSchemeId} className="w-full sm:w-auto"><PlusCircle size={16} className="mr-2" /> Add New Scheme</Button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="p-3 text-sm font-semibold text-black">Description</th>
-                <th className="p-3 text-sm font-semibold text-black">Rule</th>
-                <th className="p-3 text-sm font-semibold text-black text-right">Actions</th>
+          <table className="w-full text-left min-w-[600px]">
+            <thead className="bg-background">
+              <tr className="border-b border-border">
+                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Description</th>
+                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Rule</th>
+                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {schemes.map(scheme => (
-                <tr key={scheme.id} className="border-b hover:bg-gray-50">
+                <tr key={scheme.id} className="border-b border-border hover:bg-background">
                   <td className="p-3 w-1/3 font-semibold">{scheme.description}</td>
                   <td className="p-3">
                     Buy {scheme.buyQuantity} x <span className="font-medium">{getSkuName(scheme.buySkuId)}</span>, 
@@ -173,7 +186,7 @@ const ManageSchemes: React.FC = () => {
               ))}
               {schemes.length === 0 && (
                   <tr>
-                      <td colSpan={3} className="text-center p-4 text-gray-500">No global schemes have been created yet.</td>
+                      <td colSpan={3} className="text-center p-4 text-text-secondary">No global schemes have been created yet.</td>
                   </tr>
               )}
             </tbody>

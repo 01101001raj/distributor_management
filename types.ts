@@ -19,7 +19,6 @@ export enum NotificationType {
   ORDER_FAILED = 'ORDER_FAILED',
   NEW_SCHEME = 'NEW_SCHEME',
   DISTRIBUTOR_ADDED = 'DISTRIBUTOR_ADDED',
-  CREDIT_LIMIT_HIGH = 'CREDIT_LIMIT_HIGH',
 }
 
 export enum OrderStatus {
@@ -44,8 +43,6 @@ export interface Distributor {
   hasSpecialSchemes: boolean;
   agreementUrl?: string;
   walletBalance: number;
-  creditUsed: number;
-  creditLimit: number;
   dateAdded: string;
   addedByExecId: string;
 }
@@ -80,7 +77,6 @@ export interface WalletTransaction {
   id: string;
   distributorId: string;
   amount: number;
-  creditAmount?: number;
   type: TransactionType;
   date: string;
   addedBy: string;
@@ -96,7 +92,6 @@ export interface Order {
   distributorId: string;
   totalAmount: number;
   coveredByWallet: number;
-  coveredByCredit: number;
   date: string;
   placedByExecId: string;
   status: OrderStatus;

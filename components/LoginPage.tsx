@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -13,7 +12,13 @@ interface FormInputs {
 }
 
 const LoginPage: React.FC = () => {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormInputs>();
+  const { register, handleSubmit, formState: { errors, isValid } } = useForm<FormInputs>({
+    mode: 'onBlur',
+    defaultValues: {
+      username: '',
+      password: '',
+    }
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const { login } = useAuth();
@@ -56,7 +61,7 @@ const LoginPage: React.FC = () => {
             autoComplete="current-password"
           />
           {loginError && <p className="text-sm text-red-600 text-center">{loginError}</p>}
-          <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
+          <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={!isValid}>
             Login
           </Button>
         </form>

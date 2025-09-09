@@ -37,6 +37,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
     const [globalSchemes, setGlobalSchemes] = useState<Scheme[]>([]);
     const [distributorSchemes, setDistributorSchemes] = useState<Scheme[]>([]);
     const [distributorPrices, setDistributorPrices] = useState<SpecialPrice[]>([]);
+    const [itemErrors, setItemErrors] = useState<Record<string, string>>({});
     
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -104,15 +105,42 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
             itemsToDisplay.push({ skuId: sku.id, skuName: sku.name, quantity: item.quantity, unitPrice, isFreebie: false, hasSpecialPrice: !!specialPrice });
         });
 
-        applicableSchemes.forEach(scheme => {
-            const buyItem = items.find(oi => oi.skuId === scheme.buySkuId);
-            if (buyItem && buyItem.quantity > 0) {
-                const timesApplied = Math.floor(buyItem.quantity / scheme.buyQuantity);
-                if (timesApplied > 0) {
-                    const totalFree = timesApplied * scheme.getQuantity;
-                    const existing = freebies.get(scheme.getSkuId) || { quantity: 0 };
-                    freebies.set(scheme.getSkuId, { quantity: existing.quantity + totalFree });
-                }
+        // --- REFACTORED SCHEME LOGIC ---
+        // Group schemes by the product to buy and sort by buyQuantity descending
+        const schemesByBuySku = applicableSchemes.reduce((acc, scheme) => {
+            if (!acc[scheme.buySkuId]) acc[scheme.buySkuId] = [];
+            acc[scheme.buySkuId].push(scheme);
+            return acc;
+        }, {} as Record<string, Scheme[]>);
+
+        for (const skuId in schemesByBuySku) {
+            schemesByBuySku[skuId].sort((a, b) => b.buyQuantity - a.buyQuantity);
+        }
+
+        // Create a map of purchased quantities to process
+        const purchasedQuantities = new Map<string, number>();
+        items.forEach(item => { // 'items' is the state variable in this component
+            if (item.quantity > 0) {
+                purchasedQuantities.set(item.skuId, (purchasedQuantities.get(item.skuId) || 0) + item.quantity);
+            }
+        });
+
+        // Iterate over purchased items and apply schemes greedily
+        purchasedQuantities.forEach((quantity, skuId) => {
+            const relevantSchemes = schemesByBuySku[skuId];
+            if (relevantSchemes) {
+                let remainingQuantity = quantity;
+                relevantSchemes.forEach(scheme => {
+                    if (remainingQuantity >= scheme.buyQuantity) {
+                        const timesApplied = Math.floor(remainingQuantity / scheme.buyQuantity);
+                        const totalFree = timesApplied * scheme.getQuantity;
+                        
+                        const existing = freebies.get(scheme.getSkuId) || { quantity: 0 };
+                        freebies.set(scheme.getSkuId, { quantity: existing.quantity + totalFree });
+                        
+                        remainingQuantity %= scheme.buyQuantity;
+                    }
+                });
             }
         });
         
@@ -134,10 +162,28 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
 
     const handleItemChange = (itemId: string, field: 'skuId' | 'quantity', value: string | number) => {
         setItems(items.map(item => item.id === itemId ? { ...item, [field]: value } : item));
+
+        if (field === 'quantity') {
+            const qty = Number(value);
+            setItemErrors(prev => {
+                const newErrors = {...prev};
+                if (qty <= 0) {
+                    newErrors[itemId] = 'Quantity must be positive.';
+                } else {
+                    delete newErrors[itemId];
+                }
+                return newErrors;
+            });
+        }
     };
 
     const handleRemoveItem = (itemId: string) => {
         setItems(items.filter((item) => item.id !== itemId));
+        setItemErrors(prev => {
+            const newErrors = {...prev};
+            delete newErrors[itemId];
+            return newErrors;
+        });
     };
 
     const handleSaveChanges = async () => {
@@ -159,13 +205,14 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
     };
     
     const delta = subtotal - order.totalAmount;
-    const canAfford = distributor && delta > 0 ? (delta <= distributor.walletBalance + (distributor.creditLimit - distributor.creditUsed)) : true;
+    const canAfford = distributor && delta > 0 ? (delta <= distributor.walletBalance) : true;
+    const hasErrors = Object.keys(itemErrors).length > 0;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4" onClick={onClose}>
             <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <div className="p-4 border-b flex justify-between items-center">
-                    <h2 className="text-xl font-bold">Edit Order <span className="font-mono text-sm text-gray-500">{order.id}</span></h2>
+                    <h2 className="text-xl font-bold">Edit Order <span className="font-mono text-sm text-gray-500 block sm:inline mt-1 sm:mt-0">{order.id}</span></h2>
                     <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200"><XCircle /></button>
                 </div>
                 
@@ -175,17 +222,23 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
                         <h3 className="text-lg font-semibold mb-2">Order Items</h3>
                         <div className="space-y-2">
                             {items.map((item) => (
-                                <div key={item.id} className="grid grid-cols-12 gap-2 items-center p-2 rounded-md bg-gray-50">
-                                    <div className="col-span-8 md:col-span-7">
-                                        <Select label="" value={item.skuId} onChange={(e) => handleItemChange(item.id, 'skuId', e.target.value)}>
+                                <div key={item.id} className="grid grid-cols-12 gap-2 items-start p-2 rounded-md bg-gray-50">
+                                    <div className="col-span-12 sm:col-span-7">
+                                        <Select value={item.skuId} onChange={(e) => handleItemChange(item.id, 'skuId', e.target.value)}>
                                             {skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                         </Select>
                                     </div>
-                                    <div className="col-span-3 md:col-span-4">
-                                        <Input label="" type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 0)} min="1" />
+                                    <div className="col-span-9 sm:col-span-4">
+                                        <Input
+                                            type="number"
+                                            value={item.quantity}
+                                            onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 0)}
+                                            min="1"
+                                            error={itemErrors[item.id]}
+                                        />
                                     </div>
-                                    <div className="col-span-1 text-right">
-                                        <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16}/></button>
+                                    <div className="col-span-3 sm:col-span-1 text-right self-center">
+                                        <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={20}/></button>
                                     </div>
                                 </div>
                             ))}
@@ -197,22 +250,24 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
 
                     <Card>
                         <h3 className="font-semibold mb-2">New Order Summary</h3>
-                        <table className="w-full">
-                            <tbody>
-                                {displayItems.map((item, index) => (
-                                    <tr key={index} className={item.isFreebie ? 'bg-green-50' : ''}>
-                                        <td className="p-2 w-1/2">
-                                            {item.skuName}
-                                            {item.isFreebie && <Gift size={12} className="inline ml-2 text-green-600"/>}
-                                            {item.hasSpecialPrice && <Star size={12} className="inline ml-2 text-yellow-500"/>}
-                                        </td>
-                                        <td className="p-2 text-center">{item.quantity}</td>
-                                        <td className="p-2 text-right">₹{item.unitPrice.toLocaleString()}</td>
-                                        <td className="p-2 text-right font-semibold">₹{(item.quantity * item.unitPrice).toLocaleString()}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[400px]">
+                                <tbody>
+                                    {displayItems.map((item, index) => (
+                                        <tr key={index} className={item.isFreebie ? 'bg-green-50' : ''}>
+                                            <td className="p-2 w-1/2">
+                                                {item.skuName}
+                                                {item.isFreebie && <Gift size={12} className="inline ml-2 text-green-600"/>}
+                                                {item.hasSpecialPrice && <Star size={12} className="inline ml-2 text-yellow-500"/>}
+                                            </td>
+                                            <td className="p-2 text-center">{item.quantity}</td>
+                                            <td className="p-2 text-right">₹{item.unitPrice.toLocaleString()}</td>
+                                            <td className="p-2 text-right font-semibold">₹{(item.quantity * item.unitPrice).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </Card>
 
                     <Card className="bg-blue-50">
@@ -237,7 +292,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
 
                 <div className="p-4 bg-gray-50 border-t flex justify-end gap-4">
                     <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                    <Button onClick={handleSaveChanges} isLoading={loading} disabled={loading || !canAfford || items.length === 0}>
+                    <Button onClick={handleSaveChanges} isLoading={loading} disabled={loading || !canAfford || items.length === 0 || hasErrors}>
                         <Save size={16} className="mr-2"/> Save Changes
                     </Button>
                 </div>

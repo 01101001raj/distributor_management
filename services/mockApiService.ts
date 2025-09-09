@@ -1,5 +1,4 @@
 import { Distributor, SKU, Scheme, WalletTransaction, TransactionType, Order, OrderItem, UserRole, Notification, NotificationType, EnrichedOrderItem, User, SpecialPrice, InvoiceData, EnrichedWalletTransaction, OrderStatus } from '../types';
-import { DEFAULT_CREDIT_LIMIT } from '../config';
 
 // --- MOCK DATABASE (Simulating Google Sheets) ---
 let users: User[] = [
@@ -15,12 +14,9 @@ let distributors: Distributor[] = [
         phone: '9876547890',
         state: 'Maharashtra',
         area: 'Pune',
-        hasSpecialPricing: true,
-        hasSpecialSchemes: true,
-        // Final balance after transactions
-        walletBalance: 23310, 
-        creditUsed: 500,
-        creditLimit: 10000,
+        hasSpecialPricing: false,
+        hasSpecialSchemes: false,
+        walletBalance: 22250,
         dateAdded: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
         addedByExecId: 'executive',
     },
@@ -31,11 +27,8 @@ let distributors: Distributor[] = [
         state: 'Karnataka',
         area: 'Bengaluru',
         hasSpecialPricing: false,
-        hasSpecialSchemes: true,
-        // Final balance after transactions
-        walletBalance: 12400,
-        creditUsed: 1200,
-        creditLimit: 5000,
+        hasSpecialSchemes: false,
+        walletBalance: 14650,
         dateAdded: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
         addedByExecId: 'executive',
     },
@@ -45,12 +38,9 @@ let distributors: Distributor[] = [
         phone: '9876545678',
         state: 'Tamil Nadu',
         area: 'Chennai',
-        hasSpecialPricing: true,
+        hasSpecialPricing: false,
         hasSpecialSchemes: false,
-        // Final balance after transactions
-        walletBalance: 28200, 
-        creditUsed: 0,
-        creditLimit: 2000,
+        walletBalance: 27975,
         dateAdded: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
         addedByExecId: 'executive',
     },
@@ -62,11 +52,32 @@ let distributors: Distributor[] = [
         area: 'New Delhi',
         hasSpecialPricing: false,
         hasSpecialSchemes: false,
-        // Final balance after transactions
-        walletBalance: 4000, 
-        creditUsed: 1800,
-        creditLimit: 2000,
+        walletBalance: 7000,
         dateAdded: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        addedByExecId: 'executive',
+    },
+    { 
+        id: 'MET-4567-24-IJ',
+        name: 'Metro Supplies',
+        phone: '9123454567',
+        state: 'Telangana',
+        area: 'Hyderabad',
+        hasSpecialPricing: false,
+        hasSpecialSchemes: false,
+        walletBalance: 11625,
+        dateAdded: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+        addedByExecId: 'executive',
+    },
+    { 
+        id: 'CAP-8901-24-KL',
+        name: 'Capital Traders',
+        phone: '9234568901',
+        state: 'Haryana',
+        area: 'Gurugram',
+        hasSpecialPricing: false,
+        hasSpecialSchemes: false,
+        walletBalance: 20000,
+        dateAdded: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
         addedByExecId: 'executive',
     }
 ];
@@ -79,23 +90,12 @@ let skus: SKU[] = [
   { id: 'SKU005', name: '1L premium', price: 125 },
 ];
 
-let specialPrices: SpecialPrice[] = [
-    // Price for VIP Partners Inc.
-    { id: 'SP001', distributorId: 'VIP-7890-24-AB', skuId: 'SKU005', price: 115, startDate: '2024-01-01', endDate: '2024-12-31' },
-    // Price for Price Saver Wholesale
-    { id: 'SP002', distributorId: 'PRI-5678-24-EF', skuId: 'SKU002', price: 120, startDate: '2024-01-01', endDate: '2024-12-31' },
-];
+let specialPrices: SpecialPrice[] = [];
 
 let schemes: Scheme[] = [
-  // Global Scheme
-  { id: 'SCHEME01', description: 'Global Deal: Buy 10 normal 1L, Get 1 normal 500ml Free!', buySkuId: 'SKU001', buyQuantity: 10, getSkuId: 'SKU002', getQuantity: 1, isGlobal: true },
-  // Scheme for VIP Partners Inc.
-  { id: 'SCHEME02', description: 'VIP Offer: Buy 5 premium 1L, get 1 premium 1L Free!', buySkuId: 'SKU005', buyQuantity: 5, getSkuId: 'SKU005', getQuantity: 1, isGlobal: false, distributorId: 'VIP-7890-24-AB' },
-  // Scheme for Scheme Queen Supplies
-  { id: 'SCHEME03', description: 'Super Saver: Buy 20 normal 2L, get 3 normal 250ml Free!', buySkuId: 'SKU003', buyQuantity: 20, getSkuId: 'SKU004', getQuantity: 3, isGlobal: false, distributorId: 'SCH-1234-24-CD' },
+  { id: 'SCHEME01', description: 'Global Deal: Buy 10 normal 1L, Get 1 normal 1L Free!', buySkuId: 'SKU001', buyQuantity: 10, getSkuId: 'SKU001', getQuantity: 1, isGlobal: true },
+  { id: 'SCHEME02', description: 'Global Deal: Buy 10 normal 500ml, Get 1 normal 500ml Free!', buySkuId: 'SKU002', buyQuantity: 10, getSkuId: 'SKU002', getQuantity: 1, isGlobal: true },
 ];
-
-// --- EXPANDED DUMMY DATA FOR ORDERS AND TRANSACTIONS ---
 
 let walletTransactions: WalletTransaction[] = [
     // Initial Recharges
@@ -103,43 +103,61 @@ let walletTransactions: WalletTransaction[] = [
     { id: 'TRN002', distributorId: 'SCH-1234-24-CD', amount: 16000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
     { id: 'TRN003', distributorId: 'PRI-5678-24-EF', amount: 30000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
     { id: 'TRN004', distributorId: 'STA-9012-24-GH', amount: 7000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
+    { id: 'TRN005', distributorId: 'MET-4567-24-IJ', amount: 15000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
+    { id: 'TRN006', distributorId: 'CAP-8901-24-KL', amount: 20000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
 
     // Order Debits (linked to orders below)
-    { id: 'TRN-ORD01', orderId: 'ORD01', distributorId: 'VIP-7890-24-AB', amount: -690, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
-    { id: 'TRN-ORD02', orderId: 'ORD02', distributorId: 'SCH-1234-24-CD', amount: -2600, creditAmount: -400, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
-    { id: 'TRN-ORD03', orderId: 'ORD03', distributorId: 'STA-9012-24-GH', amount: -1200, creditAmount: -600, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
-    { id: 'TRN-ORD04', orderId: 'ORD04', distributorId: 'PRI-5678-24-EF', amount: -1800, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+    { id: 'TRN-ORD01', orderId: 'ORD01', distributorId: 'VIP-7890-24-AB', amount: -750, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+    { id: 'TRN-ORD04', orderId: 'ORD04', distributorId: 'PRI-5678-24-EF', amount: -2025, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+    { id: 'TRN-ORD05', orderId: 'ORD05', distributorId: 'VIP-7890-24-AB', amount: -2000, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+    { id: 'TRN-ORD06', orderId: 'ORD06', distributorId: 'SCH-1234-24-CD', amount: -1350, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
+    { id: 'TRN-ORD08', orderId: 'ORD08', distributorId: 'MET-4567-24-IJ', amount: -3375, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
 ];
 
 let orders: Order[] = [
-    { id: 'ORD01', distributorId: 'VIP-7890-24-AB', totalAmount: 690, coveredByWallet: 690, coveredByCredit: 0, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
-    { id: 'ORD02', distributorId: 'SCH-1234-24-CD', totalAmount: 3000, coveredByWallet: 2600, coveredByCredit: 400, date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.PENDING },
-    { id: 'ORD03', distributorId: 'STA-9012-24-GH', totalAmount: 1800, coveredByWallet: 1200, coveredByCredit: 600, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.PENDING },
-    { id: 'ORD04', distributorId: 'PRI-5678-24-EF', totalAmount: 1800, coveredByWallet: 1800, coveredByCredit: 0, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
+    { id: 'ORD01', distributorId: 'VIP-7890-24-AB', totalAmount: 750, coveredByWallet: 750, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
+    { id: 'ORD02', distributorId: 'SCH-1234-24-CD', totalAmount: 3000, coveredByWallet: 3000, date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.PENDING },
+    { id: 'ORD03', distributorId: 'STA-9012-24-GH', totalAmount: 1800, coveredByWallet: 1800, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.PENDING },
+    { id: 'ORD04', distributorId: 'PRI-5678-24-EF', totalAmount: 2025, coveredByWallet: 2025, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
+    { id: 'ORD05', distributorId: 'VIP-7890-24-AB', totalAmount: 2000, coveredByWallet: 2000, date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
+    { id: 'ORD06', distributorId: 'SCH-1234-24-CD', totalAmount: 1350, coveredByWallet: 1350, date: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
+    { id: 'ORD07', distributorId: 'CAP-8901-24-KL', totalAmount: 2500, coveredByWallet: 2500, date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.PENDING },
+    { id: 'ORD08', distributorId: 'MET-4567-24-IJ', totalAmount: 3375, coveredByWallet: 3375, date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
+    { id: 'ORD09', distributorId: 'SCH-1234-24-CD', totalAmount: 1550, coveredByWallet: 1550, date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.PENDING },
 ];
 
 let orderItems: OrderItem[] = [
-    // Items for ORD01 (VIP Partners - triggers special price and scheme)
-    { orderId: 'ORD01', skuId: 'SKU005', quantity: 6, freeQuantity: 0, unitPrice: 115, isFreebie: false },
-    { orderId: 'ORD01', skuId: 'SKU005', quantity: 1, freeQuantity: 0, unitPrice: 0, isFreebie: true },
-
-    // Items for ORD02 (Scheme Queen - triggers special scheme)
+    // ORD01 (VIP) - 6x premium 1L @ 125. Total 750.
+    { orderId: 'ORD01', skuId: 'SKU005', quantity: 6, freeQuantity: 0, unitPrice: 125, isFreebie: false },
+    // ORD02 (SchQ) - 20x normal 2L @ 150. Total 3000. (Pending). OK.
     { orderId: 'ORD02', skuId: 'SKU003', quantity: 20, freeQuantity: 0, unitPrice: 150, isFreebie: false },
-    { orderId: 'ORD02', skuId: 'SKU004', quantity: 3, freeQuantity: 0, unitPrice: 0, isFreebie: true },
-
-    // Items for ORD03 (Standard Provisions - triggers global scheme)
+    // ORD03 (Std) - 18x normal 1L @ 100. Total 1800. (Pending). Triggers scheme: 1 free 1L.
     { orderId: 'ORD03', skuId: 'SKU001', quantity: 18, freeQuantity: 0, unitPrice: 100, isFreebie: false },
-    { orderId: 'ORD03', skuId: 'SKU002', quantity: 1, freeQuantity: 0, unitPrice: 0, isFreebie: true },
-
-    // Items for ORD04 (Price Saver - triggers special price)
-    { orderId: 'ORD04', skuId: 'SKU002', quantity: 15, freeQuantity: 0, unitPrice: 120, isFreebie: false },
+    { orderId: 'ORD03', skuId: 'SKU001', quantity: 1, freeQuantity: 0, unitPrice: 0, isFreebie: true },
+    // ORD04 (Price) - 15x 500ml @ 135. Total 2025. Triggers scheme.
+    { orderId: 'ORD04', skuId: 'SKU002', quantity: 15, freeQuantity: 0, unitPrice: 135, isFreebie: false },
+    { orderId: 'ORD04', skuId: 'SKU002', quantity: 1, freeQuantity: 0, unitPrice: 0, isFreebie: true },
+    // ORD05 (VIP) - 20x 1L normal @ 100. Total 2000. Triggers scheme (2 free 1L).
+    { orderId: 'ORD05', skuId: 'SKU001', quantity: 20, freeQuantity: 0, unitPrice: 100, isFreebie: false },
+    { orderId: 'ORD05', skuId: 'SKU001', quantity: 2, freeQuantity: 0, unitPrice: 0, isFreebie: true },
+    // ORD06 (SchQ) - 10x 500ml @ 135. Total 1350. Triggers scheme (1 free 500ml).
+    { orderId: 'ORD06', skuId: 'SKU002', quantity: 10, freeQuantity: 0, unitPrice: 135, isFreebie: false },
+    { orderId: 'ORD06', skuId: 'SKU002', quantity: 1, freeQuantity: 0, unitPrice: 0, isFreebie: true },
+    // ORD07 (Capital) - 20x 1L premium @ 125. Total 2500. (Pending).
+    { orderId: 'ORD07', skuId: 'SKU005', quantity: 20, freeQuantity: 0, unitPrice: 125, isFreebie: false },
+    // ORD08 (Metro) - 25x 500ml @ 135. Total 3375. Triggers scheme (2 free 500ml).
+    { orderId: 'ORD08', skuId: 'SKU002', quantity: 25, freeQuantity: 0, unitPrice: 135, isFreebie: false },
+    { orderId: 'ORD08', skuId: 'SKU002', quantity: 2, freeQuantity: 0, unitPrice: 0, isFreebie: true },
+    // ORD09 (SchQ) - 5x 2L @ 150 (750), 5x 250ml @ 160 (800). Total 1550. (Pending)
+    { orderId: 'ORD09', skuId: 'SKU003', quantity: 5, freeQuantity: 0, unitPrice: 150, isFreebie: false },
+    { orderId: 'ORD09', skuId: 'SKU004', quantity: 5, freeQuantity: 0, unitPrice: 160, isFreebie: false },
 ];
 
 let notifications: Notification[] = [
-    { id: 'NOTIF001', type: NotificationType.ORDER_PLACED, message: 'New order ORD04 placed for Price Saver Wholesale.', distributorId: 'PRI-5678-24-EF', isRead: false, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()},
-    { id: 'NOTIF002', type: NotificationType.DISTRIBUTOR_ADDED, message: 'New distributor "Standard Provisions" has been onboarded.', distributorId: 'STA-9012-24-GH', isRead: true, date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()},
-    { id: 'NOTIF003', type: NotificationType.NEW_SCHEME, message: 'New global scheme available: Buy 10 normal 1L, get 1 normal 500ml free.', isRead: false, date: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
-    { id: 'NOTIF004', type: NotificationType.CREDIT_LIMIT_HIGH, message: 'Standard Provisions has used 90% of their credit limit.', distributorId: 'STA-9012-24-GH', isRead: false, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()},
+    { id: 'NOTIF001', type: NotificationType.ORDER_PLACED, message: 'New order ORD09 placed for Scheme Queen Supplies.', distributorId: 'SCH-1234-24-CD', isRead: false, date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()},
+    { id: 'NOTIF002', type: NotificationType.DISTRIBUTOR_ADDED, message: 'New distributor "Capital Traders" has been onboarded.', distributorId: 'CAP-8901-24-KL', isRead: true, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()},
+    { id: 'NOTIF003', type: NotificationType.ORDER_PLACED, message: 'New order ORD08 placed for Metro Supplies.', distributorId: 'MET-4567-24-IJ', isRead: true, date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()},
+    { id: 'NOTIF004', type: NotificationType.NEW_SCHEME, message: 'New global scheme available: Buy 10 normal 1L, get 1 normal 1L free.', isRead: false, date: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
 ];
 
 
@@ -155,32 +173,6 @@ const generateDistributorId = (name: string, phone: string): string => {
     const randomPart = Math.random().toString(36).substring(2, 4).toUpperCase();
     return `${namePart}-${phonePart}-${yearPart}-${randomPart}`;
 }
-
-const checkCreditLimitAndNotify = (distributorId: string) => {
-    const distributor = distributors.find(d => d.id === distributorId);
-    if (!distributor || distributor.creditLimit === 0) return;
-
-    const usagePercent = (distributor.creditUsed / distributor.creditLimit);
-    const THRESHOLD = 0.8;
-
-    const existingNotification = notifications.find(n => 
-        n.distributorId === distributorId && 
-        n.type === NotificationType.CREDIT_LIMIT_HIGH && 
-        !n.isRead
-    );
-
-    if (usagePercent >= THRESHOLD && !existingNotification) {
-        const newNotification: Notification = {
-            id: generateId('NOTIF'),
-            type: NotificationType.CREDIT_LIMIT_HIGH,
-            message: `${distributor.name} has used ${(usagePercent * 100).toFixed(0)}% of their credit limit.`,
-            distributorId: distributor.id,
-            isRead: false,
-            date: new Date().toISOString(),
-        };
-        notifications.unshift(newNotification);
-    }
-};
 
 const calculateOrderTotal = (
     items: { skuId: string; quantity: number }[],
@@ -210,27 +202,49 @@ const calculateOrderTotal = (
         newOrderItems.push({ skuId: item.skuId, quantity: item.quantity, freeQuantity: 0, unitPrice: unitPrice, isFreebie: false });
     }
 
-    const freebies: Omit<OrderItem, 'orderId'>[] = [];
-    for (const scheme of applicableSchemes) {
-        const buyItem = newOrderItems.find(oi => oi.skuId === scheme.buySkuId && !oi.isFreebie);
-        if (buyItem) {
-            const timesSchemeApplied = Math.floor(buyItem.quantity / scheme.buyQuantity);
-            if (timesSchemeApplied > 0) {
-                const getSku = skus.find(s => s.id === scheme.getSkuId);
-                if (getSku) {
-                    const totalFreeQuantity = timesSchemeApplied * scheme.getQuantity;
-                    const existingFreebie = freebies.find(f => f.skuId === scheme.getSkuId);
-                    if (existingFreebie) {
-                        existingFreebie.quantity += totalFreeQuantity;
-                    } else {
-                        freebies.push({ skuId: scheme.getSkuId, quantity: totalFreeQuantity, unitPrice: 0, freeQuantity: 0, isFreebie: true });
-                    }
-                }
-            }
-        }
+    const freebies = new Map<string, { quantity: number; source: string }>();
+
+    const schemesByBuySku = applicableSchemes.reduce((acc, scheme) => {
+        if (!acc[scheme.buySkuId]) acc[scheme.buySkuId] = [];
+        acc[scheme.buySkuId].push(scheme);
+        return acc;
+    }, {} as Record<string, Scheme[]>);
+
+    for (const skuId in schemesByBuySku) {
+        schemesByBuySku[skuId].sort((a, b) => b.buyQuantity - a.buyQuantity);
     }
+
+    const purchasedQuantities = new Map<string, number>();
+    items.forEach(item => {
+        if (item.quantity > 0) {
+            purchasedQuantities.set(item.skuId, (purchasedQuantities.get(item.skuId) || 0) + item.quantity);
+        }
+    });
+
+    purchasedQuantities.forEach((quantity, skuId) => {
+        const relevantSchemes = schemesByBuySku[skuId];
+        if (relevantSchemes) {
+            let remainingQuantity = quantity;
+            relevantSchemes.forEach(scheme => {
+                if (remainingQuantity >= scheme.buyQuantity) {
+                    const timesApplied = Math.floor(remainingQuantity / scheme.buyQuantity);
+                    const totalFree = timesApplied * scheme.getQuantity;
+                    
+                    const existing = freebies.get(scheme.getSkuId) || { quantity: 0, source: scheme.description };
+                    freebies.set(scheme.getSkuId, { quantity: existing.quantity + totalFree, source: scheme.description });
+                    
+                    remainingQuantity %= scheme.buyQuantity;
+                }
+            });
+        }
+    });
     
-    const finalOrderItems = [...newOrderItems, ...freebies];
+    const freebieItems: Omit<OrderItem, 'orderId'>[] = [];
+    freebies.forEach((data, freeSkuId) => {
+        freebieItems.push({ skuId: freeSkuId, quantity: data.quantity, unitPrice: 0, freeQuantity: 0, isFreebie: true });
+    });
+    
+    const finalOrderItems = [...newOrderItems, ...freebieItems];
     return { finalOrderItems, totalAmount };
 };
 
@@ -381,7 +395,7 @@ export const api = {
       return simulateDelay([...notifications]);
   },
 
-  addDistributor: async (data: Omit<Distributor, 'id' | 'dateAdded' | 'walletBalance' | 'creditUsed' | 'creditLimit'> & { agreementFile: File | null }): Promise<Distributor> => {
+  addDistributor: async (data: Omit<Distributor, 'id' | 'dateAdded' | 'walletBalance'> & { agreementFile: File | null }): Promise<Distributor> => {
     const newId = generateDistributorId(data.name, data.phone);
     // Simulate file upload to Google Drive
     const agreementUrl = data.agreementFile ? `https://fake.drive.google.com/${newId}-${data.agreementFile.name}` : undefined;
@@ -390,8 +404,6 @@ export const api = {
       ...data,
       id: newId,
       walletBalance: 0,
-      creditUsed: 0,
-      creditLimit: DEFAULT_CREDIT_LIMIT,
       agreementUrl,
       dateAdded: new Date().toISOString().split('T')[0],
     };
@@ -413,16 +425,8 @@ export const api = {
   rechargeWallet: async (distributorId: string, amount: number, addedBy: string): Promise<WalletTransaction> => {
     const distributor = distributors.find(d => d.id === distributorId);
     if (!distributor) throw new Error("Distributor not found");
-
-    let rechargeAmount = amount;
-    const creditToClear = Math.min(rechargeAmount, distributor.creditUsed);
-
-    if (creditToClear > 0) {
-      distributor.creditUsed -= creditToClear;
-      rechargeAmount -= creditToClear;
-    }
     
-    distributor.walletBalance += rechargeAmount;
+    distributor.walletBalance += amount;
     
     const newTransaction: WalletTransaction = {
       id: generateId('TRN'),
@@ -433,8 +437,6 @@ export const api = {
       addedBy,
     };
     walletTransactions.push(newTransaction);
-    
-    checkCreditLimitAndNotify(distributorId);
     
     return simulateDelay(newTransaction);
   },
@@ -449,10 +451,8 @@ export const api = {
 
     const { finalOrderItems, totalAmount } = calculateOrderTotal(items, distributorId);
 
-    const availableCredit = distributor.creditLimit - distributor.creditUsed;
-    const totalAvailableFunds = distributor.walletBalance + availableCredit;
-
-    if (totalAmount > totalAvailableFunds) {
+    // Only check for balance, do not debit yet.
+    if (totalAmount > distributor.walletBalance) {
         const failNotification: Notification = {
             id: generateId('NOTIF'),
             type: NotificationType.ORDER_FAILED,
@@ -465,19 +465,12 @@ export const api = {
         throw new Error("Insufficient Balance");
     }
 
-    const paidByWallet = Math.min(totalAmount, distributor.walletBalance);
-    const paidByCredit = totalAmount - paidByWallet;
-
-    distributor.walletBalance -= paidByWallet;
-    distributor.creditUsed += paidByCredit;
-
     const newOrderId = generateId('ORD');
     const newOrder: Order = {
         id: newOrderId,
         distributorId,
         totalAmount,
-        coveredByWallet: paidByWallet,
-        coveredByCredit: paidByCredit,
+        coveredByWallet: totalAmount, // This will be used upon delivery
         date: new Date().toISOString(),
         placedByExecId,
         status: OrderStatus.PENDING,
@@ -495,22 +488,6 @@ export const api = {
         date: new Date().toISOString(),
     };
     notifications.unshift(successNotification);
-    
-    if (paidByWallet > 0 || paidByCredit > 0) {
-        const debitTransaction: WalletTransaction = {
-            id: generateId('TRN'),
-            orderId: newOrderId,
-            distributorId,
-            amount: -paidByWallet,
-            creditAmount: paidByCredit > 0 ? -paidByCredit : undefined,
-            type: TransactionType.ORDER_DEBIT,
-            date: new Date().toISOString(),
-            addedBy: placedByExecId,
-        };
-        walletTransactions.push(debitTransaction);
-    }
-    
-    checkCreditLimitAndNotify(distributorId);
 
     return simulateDelay(newOrder);
   },
@@ -519,27 +496,42 @@ export const api = {
     const orderIndex = orders.findIndex(o => o.id === orderId);
     if (orderIndex === -1) throw new Error("Order not found");
 
-    const updatedOrder = {
-        ...orders[orderIndex],
-        status: status,
-    };
-
-    orders = orders.map(order => (order.id === orderId ? updatedOrder : order));
-
+    const orderToUpdate = { ...orders[orderIndex] };
+    
+    // Prevent re-processing a delivered order
+    if (orderToUpdate.status === OrderStatus.DELIVERED && status === OrderStatus.DELIVERED) {
+        return simulateDelay(orderToUpdate);
+    }
+    
+    orderToUpdate.status = status;
+    
     if (status === OrderStatus.DELIVERED) {
-        const confirmationTransaction: WalletTransaction = {
+        const distributor = distributors.find(d => d.id === orderToUpdate.distributorId);
+        if (!distributor) throw new Error("Distributor for this order not found during status update.");
+
+        // Check balance at the time of delivery
+        if (orderToUpdate.totalAmount > distributor.walletBalance) {
+            throw new Error(`Delivery failed: insufficient funds. Distributor has ₹${distributor.walletBalance.toLocaleString()} but order costs ₹${orderToUpdate.totalAmount.toLocaleString()}.`);
+        }
+
+        // Deduct from wallet and create transaction now
+        distributor.walletBalance -= orderToUpdate.totalAmount;
+
+        const debitTransaction: WalletTransaction = {
             id: generateId('TRN'),
             orderId,
-            distributorId: updatedOrder.distributorId,
-            amount: 0,
-            type: TransactionType.ORDER_CONFIRMED,
+            distributorId: orderToUpdate.distributorId,
+            amount: -orderToUpdate.totalAmount, // Negative amount
+            type: TransactionType.ORDER_DEBIT,
             date: new Date().toISOString(),
             addedBy: actorId,
         };
-        walletTransactions.push(confirmationTransaction);
+        walletTransactions.push(debitTransaction);
     }
+    
+    orders[orderIndex] = orderToUpdate;
 
-    return simulateDelay(updatedOrder);
+    return simulateDelay(orderToUpdate);
   },
   
   updateOrderItems: async (
@@ -558,61 +550,22 @@ export const api = {
 
     const delta = newTotalAmount - order.totalAmount;
     
-    // If cost increased, check if distributor can afford it
+    // If cost increased, check if distributor can afford it from their current balance
     if (delta > 0) {
-        const availableCredit = distributor.creditLimit - distributor.creditUsed;
-        const totalAvailableFunds = distributor.walletBalance + availableCredit;
-        if (delta > totalAvailableFunds) {
+        if (delta > distributor.walletBalance) {
             throw new Error(`Insufficient funds to cover price increase of ₹${delta.toLocaleString()}.`);
         }
     }
 
-    // Apply financial delta
-    let walletChange = 0;
-    let creditChange = 0;
-
-    if (delta > 0) { // Debit distributor
-        const debitFromWallet = Math.min(delta, distributor.walletBalance);
-        const debitFromCredit = delta - debitFromWallet;
-        distributor.walletBalance -= debitFromWallet;
-        distributor.creditUsed += debitFromCredit;
-        walletChange = -debitFromWallet;
-        creditChange = debitFromCredit;
-    } else if (delta < 0) { // Credit distributor
-        const creditAmount = Math.abs(delta);
-        const creditToCreditUsed = Math.min(creditAmount, order.coveredByCredit + creditChange); // Use updated credit
-        const creditToWallet = creditAmount - creditToCreditUsed;
-        distributor.creditUsed -= creditToCreditUsed;
-        distributor.walletBalance += creditToWallet;
-        walletChange = creditToWallet;
-        creditChange = -creditToCreditUsed;
-    }
-
-    // Update order object
+    // No wallet transactions or balance changes for pending orders.
+    // Just update the order details.
     order.totalAmount = newTotalAmount;
-    order.coveredByWallet += walletChange;
-    order.coveredByCredit += creditChange;
+    order.coveredByWallet = newTotalAmount;
 
     // Replace order items
     orderItems = orderItems.filter(oi => oi.orderId !== orderId);
     newFinalOrderItems.forEach(item => orderItems.push({ ...item, orderId: orderId }));
-
-    // Add an adjustment transaction
-    if (delta !== 0) {
-        const adjustmentTransaction: WalletTransaction = {
-            id: generateId('TRN'),
-            orderId: order.id,
-            distributorId: distributor.id,
-            amount: walletChange,
-            creditAmount: creditChange > 0 ? -creditChange : undefined, // Store as negative for consistency
-            type: TransactionType.ORDER_ADJUSTMENT,
-            date: new Date().toISOString(),
-            addedBy: actorId,
-        };
-        walletTransactions.push(adjustmentTransaction);
-    }
     
-    checkCreditLimitAndNotify(distributor.id);
     return simulateDelay(order);
   },
 

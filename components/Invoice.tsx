@@ -80,7 +80,7 @@ const Invoice: React.FC = () => {
                         </div>
                         <div className="text-right">
                             <p className="font-mono text-sm text-text-secondary">#{order.id}</p>
-                            <p><span className="font-semibold">Date:</span> {new Date(order.date).toLocaleDateString()}</p>
+                            <p><span className="font-semibold text-text-primary">Date:</span> {new Date(order.date).toLocaleDateString()}</p>
                         </div>
                     </div>
 
@@ -106,10 +106,10 @@ const Invoice: React.FC = () => {
                             <tbody>
                                 {items.map((item, index) => (
                                     <tr key={index} className="border-b">
-                                        <td className="p-3 font-medium">{item.skuName} {item.isFreebie && <span className="text-green-600 font-normal text-xs">(Freebie)</span>}</td>
-                                        <td className="p-3 text-center">{item.quantity}</td>
-                                        <td className="p-3 text-right">₹{item.unitPrice.toFixed(2)}</td>
-                                        <td className="p-3 text-right font-semibold">₹{(item.quantity * item.unitPrice).toFixed(2)}</td>
+                                        <td className="p-3 font-medium text-text-primary">{item.skuName} {item.isFreebie && <span className="text-green-600 font-normal text-xs">(Freebie)</span>}</td>
+                                        <td className="p-3 text-center text-text-primary">{item.quantity}</td>
+                                        <td className="p-3 text-right text-text-primary">₹{item.unitPrice.toFixed(2)}</td>
+                                        <td className="p-3 text-right font-semibold text-text-primary">₹{(item.quantity * item.unitPrice).toFixed(2)}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -121,7 +121,7 @@ const Invoice: React.FC = () => {
                         <div className="w-full sm:w-1/2 md:w-1/3 space-y-3">
                              <div className="flex justify-between">
                                 <span className="text-text-secondary">Subtotal</span>
-                                <span className="font-semibold">₹{order.totalAmount.toFixed(2)}</span>
+                                <span className="font-semibold text-text-primary">₹{order.totalAmount.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between border-t pt-3">
                                 <span className="text-text-primary font-bold text-xl">TOTAL</span>
@@ -129,7 +129,6 @@ const Invoice: React.FC = () => {
                             </div>
                              <div className="text-right text-sm text-text-secondary space-y-1 pt-4">
                                 <p>Paid from Wallet: ₹{order.coveredByWallet.toFixed(2)}</p>
-                                <p>Paid from Credit: ₹{order.coveredByCredit.toFixed(2)}</p>
                             </div>
                         </div>
                     </div>

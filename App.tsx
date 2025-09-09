@@ -14,6 +14,7 @@ import DistributorDetailsPage from './components/DistributorDetailsPage';
 import UserManagement from './components/UserManagement';
 import ManageSchemes from './components/ManageSchemes';
 import Invoice from './components/Invoice';
+import SalesPage from './components/SalesPage';
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function ProtectedRoutes() {
         <Route path="place-order" element={<PlaceOrder />} />
         <Route path="recharge-wallet" element={<RechargeWallet />} />
         <Route path="orders" element={<OrderHistory />} />
+        <Route path="sales" element={<SalesPage />} />
         <Route path="distributors/:distributorId" element={<DistributorDetailsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="manage-skus" element={<ManageSKUs />} />

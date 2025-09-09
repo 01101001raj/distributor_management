@@ -19,7 +19,17 @@ interface FormInputs {
 }
 
 const DistributorOnboarding: React.FC = () => {
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<FormInputs>();
+  const { register, handleSubmit, formState: { errors, isValid }, reset } = useForm<FormInputs>({
+      mode: 'onBlur',
+      defaultValues: {
+        name: '',
+        phone: '',
+        state: '',
+        area: '',
+        hasSpecialPricing: false,
+        hasSpecialSchemes: false,
+      }
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [fileName, setFileName] = useState('');
@@ -91,12 +101,14 @@ const DistributorOnboarding: React.FC = () => {
             error={errors.state?.message}
           />
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
          <Input
             id="area"
             label="Area Name"
             {...register('area', { required: 'Area Name is required' })}
             error={errors.area?.message}
           />
+        </div>
         <div className="space-y-4">
             <h3 className="text-sm font-medium text-text-secondary">Special Conditions</h3>
             <div className="flex items-center space-x-8">
@@ -123,7 +135,7 @@ const DistributorOnboarding: React.FC = () => {
         </div>
         
         <div className="pt-4">
-            <Button type="submit" isLoading={isLoading} className="w-full">
+            <Button type="submit" isLoading={isLoading} className="w-full" disabled={!isValid}>
                 Add Distributor
             </Button>
         </div>

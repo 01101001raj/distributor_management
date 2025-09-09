@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import Card from './common/Card';
@@ -9,6 +8,7 @@ import { Distributor } from '../types';
 import { api } from '../services/mockApiService';
 import { useAuth } from '../hooks/useAuth';
 import { CheckCircle, XCircle } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 interface FormInputs {
   distributorId: string;
@@ -17,7 +17,15 @@ interface FormInputs {
 }
 
 const RechargeWallet: React.FC = () => {
-  const { register, handleSubmit, formState: { errors }, watch, reset } = useForm<FormInputs>();
+  const location = useLocation();
+  const { register, handleSubmit, formState: { errors, isValid }, watch, reset } = useForm<FormInputs>({
+    mode: 'onBlur',
+    defaultValues: {
+      distributorId: location.state?.distributorId || '',
+      amount: undefined,
+      paymentMethod: 'Cash',
+    }
+  });
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -39,7 +47,7 @@ const RechargeWallet: React.FC = () => {
         setStatusMessage({ type: 'success', text: `₹${data.amount.toLocaleString()} successfully added to ${selectedDistributor?.name}'s account.` });
         // Refetch distributors to show updated balance
         api.getDistributors().then(setDistributors);
-        reset();
+        reset({ distributorId: '', amount: 0, paymentMethod: 'Cash' });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         setStatusMessage({ type: 'error', text: `Failed to recharge wallet: ${errorMessage}` });
@@ -77,10 +85,6 @@ const RechargeWallet: React.FC = () => {
                     <span className="font-medium text-text-secondary">Current Wallet Balance:</span>
                     <span className="font-bold text-black text-lg">₹{selectedDistributor.walletBalance.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                    <span className="font-medium text-text-secondary">Outstanding Credit:</span>
-                    <span className="font-bold text-black text-lg">₹{selectedDistributor.creditUsed.toLocaleString()}</span>
-                </div>
             </div>
         )}
 
@@ -108,7 +112,7 @@ const RechargeWallet: React.FC = () => {
         </Select>
         
         <div className="pt-4">
-            <Button type="submit" isLoading={isLoading} className="w-full">
+            <Button type="submit" isLoading={isLoading} className="w-full" disabled={!isValid}>
                 Recharge Wallet
             </Button>
         </div>
