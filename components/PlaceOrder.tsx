@@ -7,6 +7,7 @@ import Button from './common/Button';
 import { useAuth } from '../hooks/useAuth';
 import { PlusCircle, Trash2, CheckCircle, XCircle, Gift, Star, FileText } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { formatIndianCurrency } from '../utils/formatting';
 
 interface OrderItemState {
   id: string; // to track items for updates
@@ -273,11 +274,11 @@ const PlaceOrder: React.FC = () => {
             <div className="bg-background border border-border rounded-xl p-4">
                 <div>
                     <p className="text-xs text-text-secondary">Wallet Balance</p>
-                    <p className="text-lg font-bold text-text-primary">₹{selectedDistributor.walletBalance.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-text-primary">{formatIndianCurrency(selectedDistributor.walletBalance)}</p>
                 </div>
                 <div className="col-span-2 mt-2 pt-2 border-t border-border">
                     <p className="text-sm font-semibold text-text-secondary text-center">Total Available for Order</p>
-                    <p className="text-xl font-bold text-text-primary text-center">₹{totalAvailableForOrder.toLocaleString()}</p>
+                    <p className="text-xl font-bold text-text-primary text-center">{formatIndianCurrency(totalAvailableForOrder)}</p>
                 </div>
             </div>
           )}
@@ -331,15 +332,15 @@ const PlaceOrder: React.FC = () => {
                           {item.hasSpecialPrice && <Star size={12} className="inline ml-2 text-yellow-500"/>}
                         </td>
                         <td className="p-2 text-center">{item.quantity}</td>
-                        <td className="p-2 text-right">₹{item.unitPrice.toLocaleString()}</td>
-                        <td className="p-2 text-right font-semibold">₹{(item.quantity * item.unitPrice).toLocaleString()}</td>
+                        <td className="p-2 text-right">{formatIndianCurrency(item.unitPrice)}</td>
+                        <td className="p-2 text-right font-semibold">{formatIndianCurrency(item.quantity * item.unitPrice)}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-border">
                       <td colSpan={3} className="p-2 pt-4 text-right font-bold text-text-primary">Total Amount:</td>
-                      <td className="p-2 pt-4 text-right font-bold text-text-primary text-lg">₹{subtotal.toLocaleString()}</td>
+                      <td className="p-2 pt-4 text-right font-bold text-text-primary text-lg">{formatIndianCurrency(subtotal)}</td>
                     </tr>
                   </tfoot>
                 </table>

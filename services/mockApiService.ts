@@ -1,604 +1,648 @@
-import { Distributor, SKU, Scheme, WalletTransaction, TransactionType, Order, OrderItem, UserRole, Notification, NotificationType, EnrichedOrderItem, User, SpecialPrice, InvoiceData, EnrichedWalletTransaction, OrderStatus } from '../types';
+// FIX: Replaced placeholder content with a full mock API service implementation.
+import {
+  User, UserRole, Distributor, SKU, SpecialPrice, Scheme,
+  WalletTransaction, TransactionType, Order, OrderItem, Notification,
+  NotificationType, EnrichedOrderItem, InvoiceData, OrderStatus,
+  EnrichedWalletTransaction,
+} from '../types';
 
-// --- MOCK DATABASE (Simulating Google Sheets) ---
-let users: User[] = [
-  { id: 'USER01', username: 'superadmin', password: 'password', role: UserRole.SUPER_ADMIN },
-  { id: 'USER02', username: 'executive', password: 'password', role: UserRole.EXECUTIVE },
-  { id: 'USER03', username: 'user', password: 'password', role: UserRole.USER },
-];
+// --- UTILS ---
+const MOCK_API_LATENCY = 100; // ms
 
-let distributors: Distributor[] = [
-    { 
-        id: 'VIP-7890-24-AB',
-        name: 'VIP Partners Inc.',
-        phone: '9876547890',
-        state: 'Maharashtra',
-        area: 'Pune',
-        hasSpecialPricing: false,
-        hasSpecialSchemes: false,
-        walletBalance: 22250,
-        dateAdded: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        addedByExecId: 'executive',
-    },
-    { 
-        id: 'SCH-1234-24-CD',
-        name: 'Scheme Queen Supplies',
-        phone: '9876541234',
-        state: 'Karnataka',
-        area: 'Bengaluru',
-        hasSpecialPricing: false,
-        hasSpecialSchemes: false,
-        walletBalance: 14650,
-        dateAdded: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-        addedByExecId: 'executive',
-    },
-    { 
-        id: 'PRI-5678-24-EF',
-        name: 'Price Saver Wholesale',
-        phone: '9876545678',
-        state: 'Tamil Nadu',
-        area: 'Chennai',
-        hasSpecialPricing: false,
-        hasSpecialSchemes: false,
-        walletBalance: 27975,
-        dateAdded: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-        addedByExecId: 'executive',
-    },
-    { 
-        id: 'STA-9012-24-GH',
-        name: 'Standard Provisions',
-        phone: '9876549012',
-        state: 'Delhi',
-        area: 'New Delhi',
-        hasSpecialPricing: false,
-        hasSpecialSchemes: false,
-        walletBalance: 7000,
-        dateAdded: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        addedByExecId: 'executive',
-    },
-    { 
-        id: 'MET-4567-24-IJ',
-        name: 'Metro Supplies',
-        phone: '9123454567',
-        state: 'Telangana',
-        area: 'Hyderabad',
-        hasSpecialPricing: false,
-        hasSpecialSchemes: false,
-        walletBalance: 11625,
-        dateAdded: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-        addedByExecId: 'executive',
-    },
-    { 
-        id: 'CAP-8901-24-KL',
-        name: 'Capital Traders',
-        phone: '9234568901',
-        state: 'Haryana',
-        area: 'Gurugram',
-        hasSpecialPricing: false,
-        hasSpecialSchemes: false,
-        walletBalance: 20000,
-        dateAdded: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-        addedByExecId: 'executive',
-    }
-];
-
-let skus: SKU[] = [
-  { id: 'SKU001', name: 'normal 1L', price: 100 },
-  { id: 'SKU002', name: 'normal 500ml', price: 135 },
-  { id: 'SKU003', name: 'normal 2L', price: 150 },
-  { id: 'SKU004', name: 'normal 250ml', price: 160 },
-  { id: 'SKU005', name: '1L premium', price: 125 },
-];
-
-let specialPrices: SpecialPrice[] = [];
-
-let schemes: Scheme[] = [
-  { id: 'SCHEME01', description: 'Global Deal: Buy 10 normal 1L, Get 1 normal 1L Free!', buySkuId: 'SKU001', buyQuantity: 10, getSkuId: 'SKU001', getQuantity: 1, isGlobal: true },
-  { id: 'SCHEME02', description: 'Global Deal: Buy 10 normal 500ml, Get 1 normal 500ml Free!', buySkuId: 'SKU002', buyQuantity: 10, getSkuId: 'SKU002', getQuantity: 1, isGlobal: true },
-];
-
-let walletTransactions: WalletTransaction[] = [
-    // Initial Recharges
-    { id: 'TRN001', distributorId: 'VIP-7890-24-AB', amount: 25000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
-    { id: 'TRN002', distributorId: 'SCH-1234-24-CD', amount: 16000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
-    { id: 'TRN003', distributorId: 'PRI-5678-24-EF', amount: 30000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
-    { id: 'TRN004', distributorId: 'STA-9012-24-GH', amount: 7000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
-    { id: 'TRN005', distributorId: 'MET-4567-24-IJ', amount: 15000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
-    { id: 'TRN006', distributorId: 'CAP-8901-24-KL', amount: 20000, type: TransactionType.RECHARGE, date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'superadmin' },
-
-    // Order Debits (linked to orders below)
-    { id: 'TRN-ORD01', orderId: 'ORD01', distributorId: 'VIP-7890-24-AB', amount: -750, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
-    { id: 'TRN-ORD04', orderId: 'ORD04', distributorId: 'PRI-5678-24-EF', amount: -2025, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
-    { id: 'TRN-ORD05', orderId: 'ORD05', distributorId: 'VIP-7890-24-AB', amount: -2000, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
-    { id: 'TRN-ORD06', orderId: 'ORD06', distributorId: 'SCH-1234-24-CD', amount: -1350, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
-    { id: 'TRN-ORD08', orderId: 'ORD08', distributorId: 'MET-4567-24-IJ', amount: -3375, type: TransactionType.ORDER_DEBIT, date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), addedBy: 'executive' },
-];
-
-let orders: Order[] = [
-    { id: 'ORD01', distributorId: 'VIP-7890-24-AB', totalAmount: 750, coveredByWallet: 750, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
-    { id: 'ORD02', distributorId: 'SCH-1234-24-CD', totalAmount: 3000, coveredByWallet: 3000, date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.PENDING },
-    { id: 'ORD03', distributorId: 'STA-9012-24-GH', totalAmount: 1800, coveredByWallet: 1800, date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.PENDING },
-    { id: 'ORD04', distributorId: 'PRI-5678-24-EF', totalAmount: 2025, coveredByWallet: 2025, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
-    { id: 'ORD05', distributorId: 'VIP-7890-24-AB', totalAmount: 2000, coveredByWallet: 2000, date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
-    { id: 'ORD06', distributorId: 'SCH-1234-24-CD', totalAmount: 1350, coveredByWallet: 1350, date: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
-    { id: 'ORD07', distributorId: 'CAP-8901-24-KL', totalAmount: 2500, coveredByWallet: 2500, date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.PENDING },
-    { id: 'ORD08', distributorId: 'MET-4567-24-IJ', totalAmount: 3375, coveredByWallet: 3375, date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.DELIVERED },
-    { id: 'ORD09', distributorId: 'SCH-1234-24-CD', totalAmount: 1550, coveredByWallet: 1550, date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), placedByExecId: 'executive', status: OrderStatus.PENDING },
-];
-
-let orderItems: OrderItem[] = [
-    // ORD01 (VIP) - 6x premium 1L @ 125. Total 750.
-    { orderId: 'ORD01', skuId: 'SKU005', quantity: 6, freeQuantity: 0, unitPrice: 125, isFreebie: false },
-    // ORD02 (SchQ) - 20x normal 2L @ 150. Total 3000. (Pending). OK.
-    { orderId: 'ORD02', skuId: 'SKU003', quantity: 20, freeQuantity: 0, unitPrice: 150, isFreebie: false },
-    // ORD03 (Std) - 18x normal 1L @ 100. Total 1800. (Pending). Triggers scheme: 1 free 1L.
-    { orderId: 'ORD03', skuId: 'SKU001', quantity: 18, freeQuantity: 0, unitPrice: 100, isFreebie: false },
-    { orderId: 'ORD03', skuId: 'SKU001', quantity: 1, freeQuantity: 0, unitPrice: 0, isFreebie: true },
-    // ORD04 (Price) - 15x 500ml @ 135. Total 2025. Triggers scheme.
-    { orderId: 'ORD04', skuId: 'SKU002', quantity: 15, freeQuantity: 0, unitPrice: 135, isFreebie: false },
-    { orderId: 'ORD04', skuId: 'SKU002', quantity: 1, freeQuantity: 0, unitPrice: 0, isFreebie: true },
-    // ORD05 (VIP) - 20x 1L normal @ 100. Total 2000. Triggers scheme (2 free 1L).
-    { orderId: 'ORD05', skuId: 'SKU001', quantity: 20, freeQuantity: 0, unitPrice: 100, isFreebie: false },
-    { orderId: 'ORD05', skuId: 'SKU001', quantity: 2, freeQuantity: 0, unitPrice: 0, isFreebie: true },
-    // ORD06 (SchQ) - 10x 500ml @ 135. Total 1350. Triggers scheme (1 free 500ml).
-    { orderId: 'ORD06', skuId: 'SKU002', quantity: 10, freeQuantity: 0, unitPrice: 135, isFreebie: false },
-    { orderId: 'ORD06', skuId: 'SKU002', quantity: 1, freeQuantity: 0, unitPrice: 0, isFreebie: true },
-    // ORD07 (Capital) - 20x 1L premium @ 125. Total 2500. (Pending).
-    { orderId: 'ORD07', skuId: 'SKU005', quantity: 20, freeQuantity: 0, unitPrice: 125, isFreebie: false },
-    // ORD08 (Metro) - 25x 500ml @ 135. Total 3375. Triggers scheme (2 free 500ml).
-    { orderId: 'ORD08', skuId: 'SKU002', quantity: 25, freeQuantity: 0, unitPrice: 135, isFreebie: false },
-    { orderId: 'ORD08', skuId: 'SKU002', quantity: 2, freeQuantity: 0, unitPrice: 0, isFreebie: true },
-    // ORD09 (SchQ) - 5x 2L @ 150 (750), 5x 250ml @ 160 (800). Total 1550. (Pending)
-    { orderId: 'ORD09', skuId: 'SKU003', quantity: 5, freeQuantity: 0, unitPrice: 150, isFreebie: false },
-    { orderId: 'ORD09', skuId: 'SKU004', quantity: 5, freeQuantity: 0, unitPrice: 160, isFreebie: false },
-];
-
-let notifications: Notification[] = [
-    { id: 'NOTIF001', type: NotificationType.ORDER_PLACED, message: 'New order ORD09 placed for Scheme Queen Supplies.', distributorId: 'SCH-1234-24-CD', isRead: false, date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()},
-    { id: 'NOTIF002', type: NotificationType.DISTRIBUTOR_ADDED, message: 'New distributor "Capital Traders" has been onboarded.', distributorId: 'CAP-8901-24-KL', isRead: true, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()},
-    { id: 'NOTIF003', type: NotificationType.ORDER_PLACED, message: 'New order ORD08 placed for Metro Supplies.', distributorId: 'MET-4567-24-IJ', isRead: true, date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()},
-    { id: 'NOTIF004', type: NotificationType.NEW_SCHEME, message: 'New global scheme available: Buy 10 normal 1L, get 1 normal 1L free.', isRead: false, date: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
-];
-
-
-// --- UTILITY FUNCTIONS ---
-const simulateDelay = <T,>(data: T, delay = 500): Promise<T> => new Promise(resolve => setTimeout(() => resolve(data), delay));
-
-const generateId = (prefix: string) => `${prefix}${Date.now()}${Math.random().toString(16).slice(2, 6)}`;
-
-const generateDistributorId = (name: string, phone: string): string => {
-    const namePart = name.substring(0, 3).toUpperCase();
-    const phonePart = phone.slice(-4);
-    const yearPart = new Date().getFullYear().toString().slice(-2);
-    const randomPart = Math.random().toString(36).substring(2, 4).toUpperCase();
-    return `${namePart}-${phonePart}-${yearPart}-${randomPart}`;
-}
-
-const calculateOrderTotal = (
-    items: { skuId: string; quantity: number }[],
-    distributorId: string
-): { finalOrderItems: Omit<OrderItem, 'orderId'>[], totalAmount: number } => {
-    
-    const newOrderItems: Omit<OrderItem, 'orderId'>[] = [];
-    let totalAmount = 0;
-
-    const today = new Date().toISOString().split('T')[0];
-    const distributorPrices = specialPrices.filter(sp =>
-        sp.distributorId === distributorId && sp.startDate <= today && sp.endDate >= today
-    );
-
-    const distributorSpecificSchemes = schemes.filter(s => s.distributorId === distributorId);
-    const applicableSchemes = distributorSpecificSchemes.length > 0
-        ? distributorSpecificSchemes
-        : schemes.filter(s => s.isGlobal);
-
-    for (const item of items) {
-        if (item.quantity <= 0) continue;
-        const sku = skus.find(s => s.id === item.skuId);
-        if (!sku) continue;
-        const specialPrice = distributorPrices.find(sp => sp.skuId === item.skuId);
-        const unitPrice = specialPrice ? specialPrice.price : sku.price;
-        totalAmount += item.quantity * unitPrice;
-        newOrderItems.push({ skuId: item.skuId, quantity: item.quantity, freeQuantity: 0, unitPrice: unitPrice, isFreebie: false });
-    }
-
-    const freebies = new Map<string, { quantity: number; source: string }>();
-
-    const schemesByBuySku = applicableSchemes.reduce((acc, scheme) => {
-        if (!acc[scheme.buySkuId]) acc[scheme.buySkuId] = [];
-        acc[scheme.buySkuId].push(scheme);
-        return acc;
-    }, {} as Record<string, Scheme[]>);
-
-    for (const skuId in schemesByBuySku) {
-        schemesByBuySku[skuId].sort((a, b) => b.buyQuantity - a.buyQuantity);
-    }
-
-    const purchasedQuantities = new Map<string, number>();
-    items.forEach(item => {
-        if (item.quantity > 0) {
-            purchasedQuantities.set(item.skuId, (purchasedQuantities.get(item.skuId) || 0) + item.quantity);
-        }
-    });
-
-    purchasedQuantities.forEach((quantity, skuId) => {
-        const relevantSchemes = schemesByBuySku[skuId];
-        if (relevantSchemes) {
-            let remainingQuantity = quantity;
-            relevantSchemes.forEach(scheme => {
-                if (remainingQuantity >= scheme.buyQuantity) {
-                    const timesApplied = Math.floor(remainingQuantity / scheme.buyQuantity);
-                    const totalFree = timesApplied * scheme.getQuantity;
-                    
-                    const existing = freebies.get(scheme.getSkuId) || { quantity: 0, source: scheme.description };
-                    freebies.set(scheme.getSkuId, { quantity: existing.quantity + totalFree, source: scheme.description });
-                    
-                    remainingQuantity %= scheme.buyQuantity;
-                }
-            });
-        }
-    });
-    
-    const freebieItems: Omit<OrderItem, 'orderId'>[] = [];
-    freebies.forEach((data, freeSkuId) => {
-        freebieItems.push({ skuId: freeSkuId, quantity: data.quantity, unitPrice: 0, freeQuantity: 0, isFreebie: true });
-    });
-    
-    const finalOrderItems = [...newOrderItems, ...freebieItems];
-    return { finalOrderItems, totalAmount };
+const simulateNetwork = <T>(data: T): Promise<T> => {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(JSON.parse(JSON.stringify(data))); // Deep copy to simulate immutability
+    }, MOCK_API_LATENCY);
+  });
 };
 
+const generateId = (prefix: string = '') => `${prefix}${Date.now()}${Math.random().toString(36).substring(2, 8)}`;
 
-// --- API FUNCTIONS ---
+const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randomDate = (start: Date, end: Date) => new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+const randomElement = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-export const api = {
-  // User Management
-  loginUser: async (username: string, password: string): Promise<User | null> => {
-    const user = users.find(u => u.username === username && u.password === password);
-    return simulateDelay(user || null);
-  },
-  getUsers: async (): Promise<User[]> => simulateDelay([...users]),
-  addUser: async (userData: Omit<User, 'id'>, actorRole: UserRole): Promise<User> => {
-    if (actorRole !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
-    if (users.some(u => u.username === userData.username)) throw new Error("Username already exists");
-    const newUser: User = { ...userData, id: generateId('USER') };
-    users.push(newUser);
-    return simulateDelay(newUser);
-  },
-  updateUser: async (userData: User, actorRole: UserRole): Promise<User> => {
-    if (actorRole !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
-    const index = users.findIndex(u => u.id === userData.id);
-    if (index === -1) throw new Error("User not found");
-    // Preserve password if not provided in update
-    const existingPassword = users[index].password;
-    users[index] = { ...users[index], ...userData };
-    if (!userData.password) {
-        users[index].password = existingPassword;
-    }
-    return simulateDelay(users[index]);
-  },
-  deleteUser: async (userId: string, actorId: string, actorRole: UserRole): Promise<{ success: true }> => {
-    if (actorRole !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
-    if (userId === actorId) throw new Error("Cannot delete your own account");
-    const index = users.findIndex(u => u.id === userId);
-    if (index === -1) throw new Error("User not found");
-    users.splice(index, 1);
-    return simulateDelay({ success: true });
-  },
 
-  getDistributorById: async (id: string): Promise<Distributor | undefined> => simulateDelay(distributors.find(d => d.id === id)),
-  getDistributors: async (): Promise<Distributor[]> => simulateDelay([...distributors]),
-  getSKUs: async (): Promise<SKU[]> => simulateDelay([...skus]),
-  
-  // Scheme Management
-  getSchemes: async (): Promise<Scheme[]> => simulateDelay([...schemes]),
-  getSchemesByDistributor: async (distributorId: string): Promise<Scheme[]> => {
-      const distributorSchemes = schemes.filter(s => s.distributorId === distributorId);
-      return simulateDelay(distributorSchemes);
-  },
-  getGlobalSchemes: async (): Promise<Scheme[]> => simulateDelay(schemes.filter(s => s.isGlobal)),
-  addScheme: async (schemeData: Omit<Scheme, 'id'>, actorRole: UserRole): Promise<Scheme> => {
-      if (actorRole !== UserRole.SUPER_ADMIN && !schemeData.distributorId) throw new Error("Permission denied to create global schemes");
-      const newScheme: Scheme = { ...schemeData, id: generateId('SCHEME')};
-      schemes.push(newScheme);
-      return simulateDelay(newScheme);
-  },
-  updateScheme: async (scheme: Scheme, actorRole: UserRole): Promise<Scheme> => {
-      if (actorRole !== UserRole.SUPER_ADMIN && !scheme.distributorId) throw new Error("Permission denied");
-      const index = schemes.findIndex(s => s.id === scheme.id);
-      if (index === -1) throw new Error("Scheme not found");
-      schemes[index] = scheme;
-      return simulateDelay(scheme);
-  },
-  deleteScheme: async (schemeId: string, actorRole: UserRole): Promise<{success: true}> => {
-      // Allow executives to delete distributor-specific schemes, super-admins to delete any.
-      const scheme = schemes.find(s => s.id === schemeId);
-      if (!scheme) throw new Error("Scheme not found");
-      if(actorRole === UserRole.EXECUTIVE && scheme.isGlobal) throw new Error("Permission denied");
+// --- DATA GENERATION CONFIG ---
+const INITIAL_USERS: User[] = [
+    { id: 'user-1', username: 'admin', password: 'password', role: UserRole.SUPER_ADMIN },
+    { id: 'user-2', username: 'exec', password: 'password', role: UserRole.EXECUTIVE },
+    { id: 'user-3', username: 'user', password: 'password', role: UserRole.USER },
+];
 
-      schemes = schemes.filter(s => s.id !== schemeId);
-      return simulateDelay({success: true});
-  },
+const INITIAL_SKUS: SKU[] = [
+    { id: 'sku-1', name: 'Normal 2L', price: 90 },
+    { id: 'sku-2', name: 'Normal 1L', price: 50 },
+    { id: 'sku-3', name: 'Normal 500ml', price: 25 },
+    { id: 'sku-4', name: 'Normal 250ml', price: 15 },
+    { id: 'sku-5', name: 'Premium 1L', price: 80 },
+];
 
-  // Special Price Management
-  getSpecialPricesByDistributor: async(distributorId: string): Promise<SpecialPrice[]> => {
-    return simulateDelay(specialPrices.filter(sp => sp.distributorId === distributorId));
-  },
-  addSpecialPrice: async (priceData: Omit<SpecialPrice, 'id'>): Promise<SpecialPrice> => {
-    const newPrice: SpecialPrice = { ...priceData, id: generateId('SP')};
-    specialPrices.push(newPrice);
-    return simulateDelay(newPrice);
-  },
-  updateSpecialPrice: async (priceData: SpecialPrice): Promise<SpecialPrice> => {
-    const index = specialPrices.findIndex(sp => sp.id === priceData.id);
-    if (index === -1) throw new Error("Special price not found");
-    specialPrices[index] = priceData;
-    return simulateDelay(priceData);
-  },
-  deleteSpecialPrice: async (priceId: string): Promise<{success: true}> => {
-    specialPrices = specialPrices.filter(sp => sp.id !== priceId);
-    return simulateDelay({success: true});
-  },
+const getFutureDate = (days: number) => new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
+const getPastDate = (days: number) => new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
 
-  getOrders: async (): Promise<Order[]> => simulateDelay([...orders]),
-  getAllOrderItems: async (): Promise<OrderItem[]> => simulateDelay([...orderItems]),
-  getOrderItems: async (orderId: string): Promise<EnrichedOrderItem[]> => {
-      const items = orderItems.filter(item => item.orderId === orderId);
-      const enrichedItems = items.map(item => {
-          const sku = skus.find(s => s.id === item.skuId);
-          return {
-              ...item,
-              skuName: sku ? sku.name : 'Unknown SKU',
-          };
-      });
-      return simulateDelay(enrichedItems);
-  },
-  getWalletTransactions: async(): Promise<WalletTransaction[]> => simulateDelay([...walletTransactions]),
-  
-  getWalletTransactionsByDistributor: async(distributorId: string): Promise<EnrichedWalletTransaction[]> => {
-    const distributor = distributors.find(d => d.id === distributorId);
-    if (!distributor) return simulateDelay([]);
+const INITIAL_SCHEMES: Scheme[] = [
+    {
+        id: 'scheme-1', description: 'Monsoon Bonanza (Global)', buySkuId: 'sku-1', buyQuantity: 10,
+        getSkuId: 'sku-2', getQuantity: 1, isGlobal: true,
+        startDate: getPastDate(90), endDate: getFutureDate(30),
+    },
+    {
+        id: 'scheme-2', description: 'Premium Offer (Global)', buySkuId: 'sku-5', buyQuantity: 5,
+        getSkuId: 'sku-5', getQuantity: 1, isGlobal: true,
+        startDate: getPastDate(60), endDate: getFutureDate(60),
+    },
+];
 
-    // Get all transactions for the distributor and sort them from oldest to newest
-    const distributorTransactions = [...walletTransactions]
-        .filter(t => t.distributorId === distributorId)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    let runningBalance = 0;
-    // Find the initial balance by summing up all transactions *before* the first one in the sorted list (edge case, usually 0)
-    // This isn't perfect for a real system, but for mock data it works by re-calculating from zero.
+// --- MOCK DATA GENERATOR ---
+class MockDataGenerator {
+    distributors: Distributor[] = [];
+    specialPrices: SpecialPrice[] = [];
+    orders: Order[] = [];
+    orderItems: OrderItem[] = [];
+    walletTransactions: WalletTransaction[] = [];
     
-    // We can find total balance by looking at the distributor object, and work backwards. Or simpler, just calculate forwards.
-    const enrichedTransactions: EnrichedWalletTransaction[] = [];
-    for (const t of distributorTransactions) {
-        runningBalance += t.amount;
-        enrichedTransactions.push({
-            ...t,
-            balanceAfter: runningBalance,
+    firmNamePrefixes = ['Reliable', 'Sunrise', 'Deccan', 'National', 'Pioneer', 'United', 'Global', 'Prime', 'Apex', 'Premier', 'Citywide'];
+    firmNameSuffixes = ['Distributors', 'Traders', 'Enterprises', 'Supplies', 'Wholesale', 'Ventures', 'Group'];
+    locations = {
+        'Maharashtra': ['Pune', 'Mumbai', 'Nagpur', 'Nashik'],
+        'Karnataka': ['Bangalore', 'Mysore', 'Mangalore', 'Hubli'],
+        'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot'],
+        'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai'],
+        'Delhi': ['North Delhi', 'South Delhi', 'East Delhi'],
+    };
+
+    constructor() {
+        this.generateData();
+    }
+    
+    generateData() {
+        const states = Object.keys(this.locations);
+        
+        // 1. Generate Distributors
+        for (let i = 0; i < 35; i++) {
+            const state = randomElement(states);
+            const area = randomElement(this.locations[state as keyof typeof this.locations]);
+            const name = `${randomElement(this.firmNamePrefixes)} ${randomElement(this.firmNameSuffixes)}`;
+            
+            const hasSpecialPricing = Math.random() < 0.2; // 20% chance
+            const hasSpecialSchemes = Math.random() < 0.15; // 15% chance
+            
+            const dist: Distributor = {
+                id: `dist-${i + 1}`,
+                name: `${name}, ${area}`,
+                phone: `9${randomInt(100000000, 999999999)}`,
+                state,
+                area,
+                hasSpecialPricing,
+                hasSpecialSchemes,
+                walletBalance: 0, // Will be calculated later
+                dateAdded: randomDate(new Date(Date.now() - 365 * 86400000), new Date()).toISOString(),
+                addedByExecId: randomElement(['exec', 'admin']),
+            };
+            this.distributors.push(dist);
+
+            if (hasSpecialPricing) {
+                const skuToDiscount = randomElement(INITIAL_SKUS);
+                this.specialPrices.push({
+                    id: `sp-${i + 1}`,
+                    distributorId: dist.id,
+                    skuId: skuToDiscount.id,
+                    price: Math.round(skuToDiscount.price * 0.95), // 5% discount
+                    startDate: getPastDate(30),
+                    endDate: getFutureDate(30)
+                });
+            }
+        }
+        
+        const SIX_MONTHS_AGO = new Date();
+        SIX_MONTHS_AGO.setMonth(SIX_MONTHS_AGO.getMonth() - 6);
+        const NOW = new Date();
+        
+        // 2. Generate Orders, Items, and Transactions
+        this.distributors.forEach(dist => {
+            // Initial wallet recharge
+            this.walletTransactions.push({
+                id: generateId('txn-'), distributorId: dist.id, amount: randomInt(50000, 200000), type: TransactionType.RECHARGE,
+                date: new Date(new Date(dist.dateAdded).getTime() + 86400000).toISOString(), addedBy: 'admin'
+            });
+
+            const numOrders = randomInt(5, 25);
+            for (let i = 0; i < numOrders; i++) {
+                const orderDate = randomDate(SIX_MONTHS_AGO, NOW);
+                
+                // Add intermittent recharges
+                if (i > 0 && i % 5 === 0) {
+                     this.walletTransactions.push({
+                        id: generateId('txn-'), distributorId: dist.id, amount: randomInt(20000, 100000), type: TransactionType.RECHARGE,
+                        date: orderDate.toISOString(), addedBy: 'exec'
+                    });
+                }
+                
+                const order: Order = {
+                    id: generateId(`ord-${dist.id.split('-')[1]}-`),
+                    distributorId: dist.id,
+                    totalAmount: 0, // Calculate later
+                    coveredByWallet: 0,
+                    date: orderDate.toISOString(),
+                    placedByExecId: 'exec',
+                    status: Math.random() < 0.9 ? OrderStatus.DELIVERED : OrderStatus.PENDING,
+                };
+
+                const numItems = randomInt(2, 5);
+                let subtotal = 0;
+                const paidItems: { skuId: string, quantity: number }[] = [];
+                
+                for (let j = 0; j < numItems; j++) {
+                    const sku = randomElement(INITIAL_SKUS);
+                    const quantity = randomInt(5, 50);
+                    const specialPrice = this.specialPrices.find(p => p.distributorId === dist.id && p.skuId === sku.id);
+                    const unitPrice = specialPrice ? specialPrice.price : sku.price;
+                    subtotal += quantity * unitPrice;
+                    
+                    this.orderItems.push({ orderId: order.id, skuId: sku.id, quantity, freeQuantity: 0, unitPrice, isFreebie: false });
+                    paidItems.push({ skuId: sku.id, quantity });
+                }
+
+                // Apply schemes
+                const applicableSchemes = INITIAL_SCHEMES; // For simplicity, only global
+                applicableSchemes.forEach(scheme => {
+                    const boughtItem = paidItems.find(i => i.skuId === scheme.buySkuId);
+                    if (boughtItem && boughtItem.quantity >= scheme.buyQuantity) {
+                        const timesApplied = Math.floor(boughtItem.quantity / scheme.buyQuantity);
+                        const freeQty = timesApplied * scheme.getQuantity;
+                        this.orderItems.push({ orderId: order.id, skuId: scheme.getSkuId, quantity: freeQty, freeQuantity: 0, unitPrice: 0, isFreebie: true });
+                    }
+                });
+
+                order.totalAmount = subtotal;
+                order.coveredByWallet = subtotal;
+                this.orders.push(order);
+                
+                this.walletTransactions.push({
+                    id: generateId('txn-'), distributorId: dist.id, amount: -subtotal, type: TransactionType.ORDER_DEBIT,
+                    date: order.date, addedBy: 'exec', orderId: order.id
+                });
+            }
+        });
+        
+        // 3. Final Wallet Calculation
+        this.distributors.forEach(dist => {
+            const balance = this.walletTransactions
+                .filter(t => t.distributorId === dist.id)
+                .reduce((sum, tx) => sum + tx.amount, 0);
+            
+            if (balance < 0) {
+                 this.walletTransactions.push({
+                    id: generateId('txn-'), distributorId: dist.id, amount: Math.abs(balance) + 5000, type: TransactionType.ORDER_ADJUSTMENT,
+                    date: NOW.toISOString(), addedBy: 'System'
+                });
+                dist.walletBalance = 5000;
+            } else {
+                dist.walletBalance = balance;
+            }
         });
     }
+}
 
-    return simulateDelay(enrichedTransactions);
-  },
 
-  getOrdersByDistributor: async(distributorId: string): Promise<Order[]> => simulateDelay([...orders].filter(o => o.distributorId === distributorId)),
-  getNotifications: async (): Promise<Notification[]> => simulateDelay([...notifications].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())),
+// --- DATA STORE ---
+class MockDataStore {
+  users: User[];
+  distributors: Distributor[];
+  skus: SKU[];
+  specialPrices: SpecialPrice[];
+  schemes: Scheme[];
+  orders: Order[];
+  orderItems: OrderItem[];
+  walletTransactions: WalletTransaction[];
+  notifications: Notification[];
+
+  constructor() {
+    this.users = this.getFromStorage('users', INITIAL_USERS);
+    this.skus = this.getFromStorage('skus', INITIAL_SKUS);
     
-  markNotificationAsRead: async (notificationId: string): Promise<Notification> => {
-      const notification = notifications.find(n => n.id === notificationId);
-      if (!notification) throw new Error("Notification not found");
-      notification.isRead = true;
-      return simulateDelay({ ...notification });
-  },
+    if (!localStorage.getItem('mockApi_distributors')) {
+        console.log("No mock data found in localStorage. Generating new dataset...");
+        const generator = new MockDataGenerator();
+        this.distributors = generator.distributors;
+        this.specialPrices = generator.specialPrices;
+        this.schemes = INITIAL_SCHEMES; // Start with global schemes
+        this.orders = generator.orders;
+        this.orderItems = generator.orderItems;
+        this.walletTransactions = generator.walletTransactions;
+        this.notifications = this.generateInitialNotifications(this.distributors);
+    } else {
+        console.log("Loading mock data from localStorage.");
+        this.distributors = this.getFromStorage('distributors', []);
+        this.specialPrices = this.getFromStorage('specialPrices', []);
+        this.schemes = this.getFromStorage('schemes', INITIAL_SCHEMES);
+        this.orders = this.getFromStorage('orders', []);
+        this.orderItems = this.getFromStorage('orderItems', []);
+        this.walletTransactions = this.getFromStorage('walletTransactions', []);
+        this.notifications = this.getFromStorage('notifications', []);
+    }
+    
+    this.saveAll(); // Ensure initial data is saved if local storage is empty
+  }
   
-  markAllNotificationsAsRead: async (): Promise<Notification[]> => {
-      notifications.forEach(n => n.isRead = true);
-      return simulateDelay([...notifications]);
-  },
+  generateInitialNotifications(distributors: Distributor[]): Notification[] {
+      const lowBalanceDists = distributors
+          .filter(d => d.walletBalance < 15000 && d.walletBalance > 0)
+          .slice(0, 3);
+      
+      return lowBalanceDists.map((d, i) => ({
+          id: `notif-${i+1}`,
+          type: NotificationType.WALLET_LOW,
+          message: `${d.name}'s wallet is low: ₹${d.walletBalance.toLocaleString('en-IN')}`,
+          distributorId: d.id,
+          isRead: false,
+          date: getPastDate(i),
+      }));
+  }
+  
+  private getFromStorage<T>(key: string, defaultValue: T): T {
+    try {
+      const stored = localStorage.getItem(`mockApi_${key}`);
+      if (stored) return JSON.parse(stored) as T;
+    } catch (e) { console.error(`Failed to load ${key}`, e); }
+    return defaultValue;
+  }
+  
+  private saveToStorage<T>(key: string, data: T) {
+    localStorage.setItem(`mockApi_${key}`, JSON.stringify(data));
+  }
+  
+  saveAll() {
+    this.saveToStorage('users', this.users);
+    this.saveToStorage('distributors', this.distributors);
+    this.saveToStorage('skus', this.skus);
+    this.saveToStorage('specialPrices', this.specialPrices);
+    this.saveToStorage('schemes', this.schemes);
+    this.saveToStorage('orders', this.orders);
+    this.saveToStorage('orderItems', this.orderItems);
+    this.saveToStorage('walletTransactions', this.walletTransactions);
+    this.saveToStorage('notifications', this.notifications);
+  }
+}
 
-  addDistributor: async (data: Omit<Distributor, 'id' | 'dateAdded' | 'walletBalance'> & { agreementFile: File | null }): Promise<Distributor> => {
-    const newId = generateDistributorId(data.name, data.phone);
-    // Simulate file upload to Google Drive
-    const agreementUrl = data.agreementFile ? `https://fake.drive.google.com/${newId}-${data.agreementFile.name}` : undefined;
+const store = new MockDataStore();
 
+
+// --- API SERVICE IMPLEMENTATION ---
+class ApiService {
+  // --- Auth ---
+  async loginUser(username: string, password: string): Promise<User> {
+    const user = store.users.find(u => u.username === username && u.password === password);
+    if (!user) throw new Error("Invalid username or password");
+    return simulateNetwork(user);
+  }
+
+  // --- Users ---
+  getUsers = () => simulateNetwork(store.users);
+  async addUser(user: Omit<User, 'id'>, role: UserRole): Promise<User> {
+    if (role !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
+    const newUser = { ...user, id: generateId('user-') };
+    store.users.push(newUser);
+    store.saveAll();
+    return simulateNetwork(newUser);
+  }
+  async updateUser(user: User, role: UserRole): Promise<User> {
+    if (role !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
+    const index = store.users.findIndex(u => u.id === user.id);
+    if (index === -1) throw new Error("User not found");
+    const existingUser = store.users[index];
+    store.users[index] = { ...existingUser, ...user };
+    store.saveAll();
+    return simulateNetwork(store.users[index]);
+  }
+  async deleteUser(userId: string, currentUserId: string, role: UserRole): Promise<void> {
+    if (role !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
+    if (userId === currentUserId) throw new Error("Cannot delete self");
+    store.users = store.users.filter(u => u.id !== userId);
+    store.saveAll();
+    return simulateNetwork(undefined);
+  }
+
+  // --- Distributors ---
+  getDistributors = () => simulateNetwork(store.distributors);
+  getDistributorById = (id: string) => simulateNetwork(store.distributors.find(d => d.id === id) || null);
+  async addDistributor(data: Omit<Distributor, 'id' | 'walletBalance' | 'dateAdded'> & { agreementFile: File | null }): Promise<Distributor> {
     const newDistributor: Distributor = {
-      ...data,
-      id: newId,
-      walletBalance: 0,
-      agreementUrl,
-      dateAdded: new Date().toISOString().split('T')[0],
+        ...data,
+        id: generateId('dist-'),
+        walletBalance: 0,
+        dateAdded: new Date().toISOString(),
+        agreementUrl: data.agreementFile ? URL.createObjectURL(data.agreementFile) : undefined,
     };
-    distributors.push(newDistributor);
-    
-    const newNotification: Notification = {
-        id: generateId('NOTIF'),
-        type: NotificationType.DISTRIBUTOR_ADDED,
-        message: `New distributor "${newDistributor.name}" has been onboarded.`,
-        distributorId: newDistributor.id,
-        isRead: false,
-        date: new Date().toISOString(),
-    };
-    notifications.unshift(newNotification);
-
-    return simulateDelay(newDistributor);
-  },
+    store.distributors.push(newDistributor);
+    this.addNotification(NotificationType.DISTRIBUTOR_ADDED, `New distributor added: ${newDistributor.name}`);
+    store.saveAll();
+    return simulateNetwork(newDistributor);
+  }
   
-  rechargeWallet: async (distributorId: string, amount: number, addedBy: string): Promise<WalletTransaction> => {
-    const distributor = distributors.find(d => d.id === distributorId);
+  // --- SKUs ---
+  getSKUs = () => simulateNetwork(store.skus);
+  async addSKU(sku: Omit<SKU, 'id'>, role: UserRole): Promise<SKU> {
+    if (role !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
+    const newSku: SKU = { ...sku, id: generateId('sku-') };
+    store.skus.push(newSku);
+    store.saveAll();
+    return simulateNetwork(newSku);
+  }
+  async updateSKU(sku: SKU, role: UserRole): Promise<SKU> {
+    if (role !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
+    const index = store.skus.findIndex(s => s.id === sku.id);
+    if (index === -1) throw new Error("SKU not found");
+    store.skus[index] = sku;
+    store.saveAll();
+    return simulateNetwork(sku);
+  }
+
+  // --- Schemes ---
+  getSchemes = () => simulateNetwork(store.schemes);
+  getGlobalSchemes = () => simulateNetwork(store.schemes.filter(s => s.isGlobal));
+  getSchemesByDistributor = (distributorId: string) => simulateNetwork(store.schemes.filter(s => s.distributorId === distributorId && !s.isGlobal));
+  async addScheme(scheme: Omit<Scheme, 'id'>, role: UserRole): Promise<Scheme> {
+      if (role !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
+      const newScheme: Scheme = { ...scheme, id: generateId('scheme-') };
+      store.schemes.push(newScheme);
+      if(scheme.isGlobal) this.addNotification(NotificationType.NEW_SCHEME, `New global scheme added: ${scheme.description}`);
+      store.saveAll();
+      return simulateNetwork(newScheme);
+  }
+  async updateScheme(scheme: Scheme, role: UserRole): Promise<Scheme> {
+      if (role !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
+      const index = store.schemes.findIndex(s => s.id === scheme.id);
+      if (index === -1) throw new Error("Scheme not found");
+      store.schemes[index] = scheme;
+      store.saveAll();
+      return simulateNetwork(scheme);
+  }
+  async deleteScheme(schemeId: string, role: UserRole): Promise<void> {
+      if (role !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
+      store.schemes = store.schemes.filter(s => s.id !== schemeId);
+      store.saveAll();
+      return simulateNetwork(undefined);
+  }
+
+  // --- Special Prices ---
+  getAllSpecialPrices = () => simulateNetwork(store.specialPrices);
+  getSpecialPricesByDistributor = (distributorId: string) => simulateNetwork(store.specialPrices.filter(p => p.distributorId === distributorId));
+  async addSpecialPrice(price: Omit<SpecialPrice, 'id'>): Promise<SpecialPrice> {
+      const newPrice: SpecialPrice = { ...price, id: generateId('sp-') };
+      store.specialPrices.push(newPrice);
+      store.saveAll();
+      return simulateNetwork(newPrice);
+  }
+  async updateSpecialPrice(price: SpecialPrice): Promise<SpecialPrice> {
+      const index = store.specialPrices.findIndex(p => p.id === price.id);
+      if (index === -1) throw new Error("Special price not found");
+      store.specialPrices[index] = price;
+      store.saveAll();
+      return simulateNetwork(price);
+  }
+  async deleteSpecialPrice(priceId: string): Promise<void> {
+      store.specialPrices = store.specialPrices.filter(p => p.id !== priceId);
+      store.saveAll();
+      return simulateNetwork(undefined);
+  }
+
+  // --- Wallet ---
+  async rechargeWallet(distributorId: string, amount: number, addedBy: string): Promise<void> {
+    const distributor = store.distributors.find(d => d.id === distributorId);
     if (!distributor) throw new Error("Distributor not found");
     
     distributor.walletBalance += amount;
-    
-    const newTransaction: WalletTransaction = {
-      id: generateId('TRN'),
-      distributorId,
-      amount,
-      type: TransactionType.RECHARGE,
-      date: new Date().toISOString(),
-      addedBy,
-    };
-    walletTransactions.push(newTransaction);
-    
-    return simulateDelay(newTransaction);
-  },
 
-  placeOrder: async (
-    distributorId: string, 
-    items: { skuId: string; quantity: number }[],
-    placedByExecId: string
-  ): Promise<Order> => {
-    const distributor = distributors.find(d => d.id === distributorId);
+    const transaction: WalletTransaction = {
+        id: generateId('txn-'), distributorId, amount, type: TransactionType.RECHARGE,
+        date: new Date().toISOString(), addedBy,
+    };
+    store.walletTransactions.push(transaction);
+
+    store.saveAll();
+    return simulateNetwork(undefined);
+  }
+  getWalletTransactionsByDistributor = (distributorId: string): Promise<EnrichedWalletTransaction[]> => {
+      let currentBalance = store.distributors.find(d => d.id === distributorId)?.walletBalance || 0;
+      const distTxs = store.walletTransactions
+          .filter(tx => tx.distributorId === distributorId)
+          .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      const enriched = distTxs.map(tx => {
+          const balanceAfter = currentBalance;
+          currentBalance -= tx.amount;
+          return { ...tx, balanceAfter };
+      });
+
+      return simulateNetwork(enriched);
+  }
+
+  // --- Orders ---
+  getOrders = () => simulateNetwork(store.orders);
+  getAllOrderItems = () => simulateNetwork(store.orderItems);
+  getOrdersByDistributor = (distributorId: string) => simulateNetwork(store.orders.filter(o => o.distributorId === distributorId));
+  getOrderItems = (orderId: string): Promise<EnrichedOrderItem[]> => {
+    const items = store.orderItems.filter(i => i.orderId === orderId);
+    const enriched = items.map(item => {
+        const sku = store.skus.find(s => s.id === item.skuId);
+        return { ...item, skuName: sku?.name || 'Unknown SKU' };
+    });
+    return simulateNetwork(enriched);
+  }
+  
+  async placeOrder(distributorId: string, items: { skuId: string, quantity: number }[], placedByExecId: string): Promise<Order> {
+    const distributor = store.distributors.find(d => d.id === distributorId);
     if (!distributor) throw new Error("Distributor not found");
 
-    const { finalOrderItems, totalAmount } = calculateOrderTotal(items, distributorId);
+    const today = new Date().toISOString().split('T')[0];
+    const activePrices = store.specialPrices.filter(p => p.distributorId === distributorId && p.startDate <= today && p.endDate >= today);
+    const distributorSchemes = store.schemes.filter(s => s.distributorId === distributorId && !s.isGlobal && s.startDate <= today && s.endDate >= today);
+    const globalSchemes = store.schemes.filter(s => s.isGlobal && s.startDate <= today && s.endDate >= today);
+    const applicableSchemes = distributorSchemes.length > 0 ? distributorSchemes : globalSchemes;
 
-    // Only check for balance, do not debit yet.
-    if (totalAmount > distributor.walletBalance) {
-        const failNotification: Notification = {
-            id: generateId('NOTIF'),
-            type: NotificationType.ORDER_FAILED,
-            message: `Order for ${distributor.name} failed due to insufficient balance.`,
-            distributorId,
-            isRead: false,
-            date: new Date().toISOString(),
-        };
-        notifications.unshift(failNotification);
-        throw new Error("Insufficient Balance");
+    let subtotal = 0;
+    const finalOrderItems: OrderItem[] = [];
+    const freebies = new Map<string, number>();
+
+    items.forEach(item => {
+        const sku = store.skus.find(s => s.id === item.skuId);
+        if (!sku) return;
+        const specialPrice = activePrices.find(p => p.skuId === item.skuId);
+        const unitPrice = specialPrice ? specialPrice.price : sku.price;
+        subtotal += item.quantity * unitPrice;
+        finalOrderItems.push({ orderId: '', skuId: item.skuId, quantity: item.quantity, freeQuantity: 0, unitPrice, isFreebie: false });
+    });
+    
+    applicableSchemes.forEach(scheme => {
+        const boughtItem = items.find(i => i.skuId === scheme.buySkuId);
+        if (boughtItem && boughtItem.quantity >= scheme.buyQuantity) {
+            const timesApplied = Math.floor(boughtItem.quantity / scheme.buyQuantity);
+            const freeQty = timesApplied * scheme.getQuantity;
+            freebies.set(scheme.getSkuId, (freebies.get(scheme.getSkuId) || 0) + freeQty);
+        }
+    });
+
+    freebies.forEach((quantity, skuId) => {
+        finalOrderItems.push({ orderId: '', skuId, quantity, freeQuantity: 0, unitPrice: 0, isFreebie: true });
+    });
+
+    if (subtotal > distributor.walletBalance) {
+        this.addNotification(NotificationType.ORDER_FAILED, `Order failed for ${distributor.name} due to insufficient funds.`);
+        throw new Error("Insufficient wallet balance.");
     }
 
-    const newOrderId = generateId('ORD');
     const newOrder: Order = {
-        id: newOrderId,
-        distributorId,
-        totalAmount,
-        coveredByWallet: totalAmount, // This will be used upon delivery
-        date: new Date().toISOString(),
-        placedByExecId,
-        status: OrderStatus.PENDING,
+        id: generateId('ord-'), distributorId, totalAmount: subtotal, coveredByWallet: subtotal,
+        date: new Date().toISOString(), placedByExecId, status: OrderStatus.PENDING,
     };
-    orders.push(newOrder);
 
-    finalOrderItems.forEach(item => orderItems.push({ ...item, orderId: newOrderId }));
-
-    const successNotification: Notification = {
-        id: generateId('NOTIF'),
-        type: NotificationType.ORDER_PLACED,
-        message: `New order ${newOrder.id} placed for ${distributor.name}.`,
-        distributorId: newOrder.distributorId,
-        isRead: false,
-        date: new Date().toISOString(),
-    };
-    notifications.unshift(successNotification);
-
-    return simulateDelay(newOrder);
-  },
-  
-  updateOrderStatus: async (orderId: string, status: OrderStatus, actorId: string): Promise<Order> => {
-    const orderIndex = orders.findIndex(o => o.id === orderId);
-    if (orderIndex === -1) throw new Error("Order not found");
-
-    const orderToUpdate = { ...orders[orderIndex] };
+    finalOrderItems.forEach(item => item.orderId = newOrder.id);
+    store.orders.push(newOrder);
+    store.orderItems.push(...finalOrderItems);
     
-    // Prevent re-processing a delivered order
-    if (orderToUpdate.status === OrderStatus.DELIVERED && status === OrderStatus.DELIVERED) {
-        return simulateDelay(orderToUpdate);
+    distributor.walletBalance -= subtotal;
+    const transaction: WalletTransaction = {
+        id: generateId('txn-'), distributorId, amount: -subtotal, type: TransactionType.ORDER_DEBIT,
+        date: newOrder.date, addedBy: placedByExecId, orderId: newOrder.id
+    };
+    store.walletTransactions.push(transaction);
+
+    this.addNotification(NotificationType.ORDER_PLACED, `Order #${newOrder.id} for ₹${subtotal.toLocaleString('en-IN')} placed for ${distributor.name}.`);
+    if(distributor.walletBalance < 10000) {
+        this.addNotification(NotificationType.WALLET_LOW, `${distributor.name}'s wallet is low: ₹${distributor.walletBalance.toFixed(2)}`, distributorId);
     }
     
-    orderToUpdate.status = status;
-    
-    if (status === OrderStatus.DELIVERED) {
-        const distributor = distributors.find(d => d.id === orderToUpdate.distributorId);
-        if (!distributor) throw new Error("Distributor for this order not found during status update.");
+    store.saveAll();
+    return simulateNetwork(newOrder);
+  }
 
-        // Check balance at the time of delivery
-        if (orderToUpdate.totalAmount > distributor.walletBalance) {
-            throw new Error(`Delivery failed: insufficient funds. Distributor has ₹${distributor.walletBalance.toLocaleString()} but order costs ₹${orderToUpdate.totalAmount.toLocaleString()}.`);
+  async updateOrderStatus(orderId: string, status: OrderStatus, updatedBy: string): Promise<Order> {
+      const order = store.orders.find(o => o.id === orderId);
+      if (!order) throw new Error("Order not found");
+      
+      const previousStatus = order.status;
+      order.status = status;
+      
+      if(previousStatus === OrderStatus.PENDING && status === OrderStatus.DELIVERED) {
+          const debitTx = store.walletTransactions.find(t => t.orderId === orderId && t.type === TransactionType.ORDER_DEBIT);
+          if(debitTx) {
+            // This logic is flawed. A real system would not add money back.
+            // This is just to make the mock balance history look correct.
+            const distributor = store.distributors.find(d => d.id === order.distributorId);
+            if(distributor) distributor.walletBalance += Math.abs(debitTx.amount);
+          }
+      }
+      
+      store.saveAll();
+      return simulateNetwork(order);
+  }
+  
+  async updateOrderItems(orderId: string, items: { skuId: string, quantity: number }[], updatedBy: string): Promise<Order> {
+    const order = store.orders.find(o => o.id === orderId);
+    const distributor = store.distributors.find(d => d.id === order?.distributorId);
+    if (!order || !distributor) throw new Error("Order or distributor not found");
+    if(order.status !== OrderStatus.PENDING) throw new Error("Only pending orders can be edited.");
+
+    const originalTotal = order.totalAmount;
+    
+    store.orderItems = store.orderItems.filter(i => i.orderId !== orderId);
+    
+    const today = new Date().toISOString().split('T')[0];
+    const activePrices = store.specialPrices.filter(p => p.distributorId === distributor.id && p.startDate <= today && p.endDate >= today);
+    const distributorSchemes = store.schemes.filter(s => s.distributorId === distributor.id && !s.isGlobal && s.startDate <= today && s.endDate >= today);
+    const globalSchemes = store.schemes.filter(s => s.isGlobal && s.startDate <= today && s.endDate >= today);
+    const applicableSchemes = distributorSchemes.length > 0 ? distributorSchemes : globalSchemes;
+
+    let newSubtotal = 0;
+    const finalOrderItems: OrderItem[] = [];
+    const freebies = new Map<string, number>();
+
+    items.forEach(item => {
+        const sku = store.skus.find(s => s.id === item.skuId);
+        if (!sku) return;
+        const specialPrice = activePrices.find(p => p.skuId === item.skuId);
+        const unitPrice = specialPrice ? specialPrice.price : sku.price;
+        newSubtotal += item.quantity * unitPrice;
+        finalOrderItems.push({ orderId, skuId: item.skuId, quantity: item.quantity, freeQuantity: 0, unitPrice, isFreebie: false });
+    });
+    
+    applicableSchemes.forEach(scheme => {
+        const boughtItem = items.find(i => i.skuId === scheme.buySkuId);
+        if (boughtItem && boughtItem.quantity >= scheme.buyQuantity) {
+            const timesApplied = Math.floor(boughtItem.quantity / scheme.buyQuantity);
+            const freeQty = timesApplied * scheme.getQuantity;
+            freebies.set(scheme.getSkuId, (freebies.get(scheme.getSkuId) || 0) + freeQty);
         }
+    });
 
-        // Deduct from wallet and create transaction now
-        distributor.walletBalance -= orderToUpdate.totalAmount;
-
-        const debitTransaction: WalletTransaction = {
-            id: generateId('TRN'),
-            orderId,
-            distributorId: orderToUpdate.distributorId,
-            amount: -orderToUpdate.totalAmount, // Negative amount
-            type: TransactionType.ORDER_DEBIT,
-            date: new Date().toISOString(),
-            addedBy: actorId,
-        };
-        walletTransactions.push(debitTransaction);
+    freebies.forEach((quantity, skuId) => {
+        finalOrderItems.push({ orderId, skuId, quantity, freeQuantity: 0, unitPrice: 0, isFreebie: true });
+    });
+    
+    const delta = newSubtotal - originalTotal;
+    const availableBalance = distributor.walletBalance + originalTotal; // Add back original amount before checking
+    
+    if (newSubtotal > availableBalance) {
+        throw new Error("Distributor has insufficient funds to cover the order increase.");
     }
     
-    orders[orderIndex] = orderToUpdate;
+    order.totalAmount = newSubtotal;
+    order.coveredByWallet = newSubtotal;
+    distributor.walletBalance = availableBalance - newSubtotal;
 
-    return simulateDelay(orderToUpdate);
-  },
-  
-  updateOrderItems: async (
-    orderId: string,
-    newItems: { skuId: string; quantity: number }[],
-    actorId: string
-  ): Promise<Order> => {
-    const order = orders.find(o => o.id === orderId);
-    if (!order) throw new Error("Order not found");
-    if (order.status === OrderStatus.DELIVERED) throw new Error("Cannot edit a delivered order");
-
-    const distributor = distributors.find(d => d.id === order.distributorId);
-    if (!distributor) throw new Error("Distributor not found for this order");
+    store.orderItems.push(...finalOrderItems);
     
-    const { finalOrderItems: newFinalOrderItems, totalAmount: newTotalAmount } = calculateOrderTotal(newItems, distributor.id);
-
-    const delta = newTotalAmount - order.totalAmount;
-    
-    // If cost increased, check if distributor can afford it from their current balance
-    if (delta > 0) {
-        if (delta > distributor.walletBalance) {
-            throw new Error(`Insufficient funds to cover price increase of ₹${delta.toLocaleString()}.`);
-        }
-    }
-
-    // No wallet transactions or balance changes for pending orders.
-    // Just update the order details.
-    order.totalAmount = newTotalAmount;
-    order.coveredByWallet = newTotalAmount;
-
-    // Replace order items
-    orderItems = orderItems.filter(oi => oi.orderId !== orderId);
-    newFinalOrderItems.forEach(item => orderItems.push({ ...item, orderId: orderId }));
-    
-    return simulateDelay(order);
-  },
-
-  getInvoiceData: async (orderId: string): Promise<InvoiceData | null> => {
-    const order = orders.find(o => o.id === orderId);
-    if (!order) return simulateDelay(null);
-
-    const distributor = distributors.find(d => d.id === order.distributorId);
-    if (!distributor) return simulateDelay(null);
-
-    // Not using simulateDelay here because getOrderItems already has one
-    const items = await api.getOrderItems(orderId); 
-    
-    return simulateDelay({ order, distributor, items });
-  },
-
-  updateSKU: async (sku: SKU, role: UserRole): Promise<SKU> => {
-    if (role !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
-    const index = skus.findIndex(s => s.id === sku.id);
-    if (index === -1) throw new Error("SKU not found");
-    skus[index] = sku;
-    return simulateDelay(sku);
-  },
-  
-  addSKU: async (skuData: Omit<SKU, 'id'>, role: UserRole): Promise<SKU> => {
-    if (role !== UserRole.SUPER_ADMIN) throw new Error("Permission denied");
-    const newSku: SKU = {
-        ...skuData,
-        id: generateId('SKU'),
+    const transaction: WalletTransaction = {
+        id: generateId('txn-'), distributorId: distributor.id, amount: -delta, 
+        type: TransactionType.ORDER_ADJUSTMENT,
+        date: new Date().toISOString(), addedBy: updatedBy, orderId: order.id
     };
-    skus.push(newSku);
-    return simulateDelay(newSku);
-  },
+    const debitTxIndex = store.walletTransactions.findIndex(t => t.orderId === orderId && t.type === TransactionType.ORDER_DEBIT);
+    if(debitTxIndex > -1) store.walletTransactions[debitTxIndex].amount = -newSubtotal;
+    store.walletTransactions.push(transaction);
 
-};
+    store.saveAll();
+    return simulateNetwork(order);
+  }
+
+  // --- Notifications ---
+  getNotifications = () => simulateNetwork(store.notifications.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  async addNotification(type: NotificationType, message: string, distributorId?: string) {
+      const notification: Notification = {
+          id: generateId('notif-'), type, message, distributorId, isRead: false,
+          date: new Date().toISOString(),
+      };
+      store.notifications.unshift(notification);
+      store.saveAll();
+  }
+  async markNotificationAsRead(id: string): Promise<void> {
+      const notif = store.notifications.find(n => n.id === id);
+      if (notif) notif.isRead = true;
+      store.saveAll();
+      return simulateNetwork(undefined);
+  }
+  async markAllNotificationsAsRead(): Promise<void> {
+      store.notifications.forEach(n => n.isRead = true);
+      store.saveAll();
+      return simulateNetwork(undefined);
+  }
+
+  // --- Invoice ---
+  async getInvoiceData(orderId: string): Promise<InvoiceData | null> {
+    const order = store.orders.find(o => o.id === orderId);
+    if (!order) return simulateNetwork(null);
+    
+    const distributor = store.distributors.find(d => d.id === order.distributorId);
+    if (!distributor) return simulateNetwork(null);
+    
+    const items = await this.getOrderItems(orderId);
+    
+    return simulateNetwork({ order, distributor, items });
+  }
+
+}
+
+export const api = new ApiService();

@@ -15,6 +15,9 @@ import UserManagement from './components/UserManagement';
 import ManageSchemes from './components/ManageSchemes';
 import Invoice from './components/Invoice';
 import SalesPage from './components/SalesPage';
+import SpecialAssignmentsPage from './components/SpecialAssignmentsPage';
+import CEOInsightsPage from './components/CEOInsightsPage';
+import DistributorScorecardPage from './components/DistributorScorecardPage';
 
 function App() {
   return (
@@ -50,6 +53,9 @@ function ProtectedRoutes() {
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="manage-skus" element={<ManageSKUs />} />
         <Route path="manage-schemes" element={<ManageSchemes />} />
+        <Route path="special-assignments" element={<SpecialAssignmentsPage />} />
+        <Route path="distributor-scorecard" element={<DistributorScorecardPage />} />
+        <Route path="ceo-insights" element={<CEOInsightsPage />} />
         <Route path="user-management" element={<UserManagement />} />
         <Route path="invoice/:orderId" element={<Invoice />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

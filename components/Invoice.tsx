@@ -4,6 +4,7 @@ import { api } from '../services/mockApiService';
 import { InvoiceData } from '../types';
 import Button from './common/Button';
 import { Printer } from 'lucide-react';
+import { formatIndianCurrency } from '../utils/formatting';
 
 const Invoice: React.FC = () => {
     const { orderId } = useParams<{ orderId: string }>();
@@ -50,6 +51,7 @@ const Invoice: React.FC = () => {
     }
 
     const { order, distributor, items } = invoiceData;
+    const currencyOptions = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
     
     return (
         <>
@@ -108,8 +110,8 @@ const Invoice: React.FC = () => {
                                     <tr key={index} className="border-b">
                                         <td className="p-3 font-medium text-text-primary">{item.skuName} {item.isFreebie && <span className="text-green-600 font-normal text-xs">(Freebie)</span>}</td>
                                         <td className="p-3 text-center text-text-primary">{item.quantity}</td>
-                                        <td className="p-3 text-right text-text-primary">₹{item.unitPrice.toFixed(2)}</td>
-                                        <td className="p-3 text-right font-semibold text-text-primary">₹{(item.quantity * item.unitPrice).toFixed(2)}</td>
+                                        <td className="p-3 text-right text-text-primary">{formatIndianCurrency(item.unitPrice, currencyOptions)}</td>
+                                        <td className="p-3 text-right font-semibold text-text-primary">{formatIndianCurrency(item.quantity * item.unitPrice, currencyOptions)}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -121,14 +123,14 @@ const Invoice: React.FC = () => {
                         <div className="w-full sm:w-1/2 md:w-1/3 space-y-3">
                              <div className="flex justify-between">
                                 <span className="text-text-secondary">Subtotal</span>
-                                <span className="font-semibold text-text-primary">₹{order.totalAmount.toFixed(2)}</span>
+                                <span className="font-semibold text-text-primary">{formatIndianCurrency(order.totalAmount, currencyOptions)}</span>
                             </div>
                             <div className="flex justify-between border-t pt-3">
                                 <span className="text-text-primary font-bold text-xl">TOTAL</span>
-                                <span className="font-bold text-xl text-primary">₹{order.totalAmount.toFixed(2)}</span>
+                                <span className="font-bold text-xl text-primary">{formatIndianCurrency(order.totalAmount, currencyOptions)}</span>
                             </div>
                              <div className="text-right text-sm text-text-secondary space-y-1 pt-4">
-                                <p>Paid from Wallet: ₹{order.coveredByWallet.toFixed(2)}</p>
+                                <p>Paid from Wallet: {formatIndianCurrency(order.coveredByWallet, currencyOptions)}</p>
                             </div>
                         </div>
                     </div>

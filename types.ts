@@ -71,6 +71,8 @@ export interface Scheme {
   getQuantity: number;
   isGlobal: boolean;
   distributorId?: string;
+  startDate: string;
+  endDate: string;
 }
 
 export interface WalletTransaction {

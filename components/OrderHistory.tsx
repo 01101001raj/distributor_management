@@ -1,5 +1,6 @@
 
 
+
 import React, { useEffect, useState, useCallback } from 'react';
 import Card from './common/Card';
 import Button from './common/Button';
@@ -10,6 +11,7 @@ import EditOrderModal from './EditOrderModal';
 import { useAuth } from '../hooks/useAuth';
 import Input from './common/Input';
 import Select from './common/Select';
+import { formatIndianCurrency } from '../utils/formatting';
 
 const OrderHistory: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -153,7 +155,7 @@ const OrderHistory: React.FC = () => {
                     <td className="p-3 font-medium">{getDistributorName(order.distributorId)}</td>
                     <td className="p-3">{new Date(order.date).toLocaleDateString()}</td>
                     <td className="p-3">{getStatusChip(order.status)}</td>
-                    <td className="p-3 font-semibold">₹{order.totalAmount.toLocaleString()}</td>
+                    <td className="p-3 font-semibold">{formatIndianCurrency(order.totalAmount)}</td>
                     <td className="p-3">
                         {order.status === OrderStatus.PENDING && (
                             <div className="flex gap-2">
@@ -228,8 +230,8 @@ const OrderDetails: React.FC<{ orderId: string }> = ({ orderId }) => {
                             <tr key={index} className={`border-b border-border last:border-none ${item.isFreebie ? 'bg-green-50' : ''}`}>
                                 <td className="p-2">{item.skuName} {item.isFreebie && <Gift size={12} className="inline ml-1 text-green-700"/>}</td>
                                 <td className="p-2 text-center">{item.quantity}</td>
-                                <td className="p-2 text-right">₹{item.unitPrice.toLocaleString()}</td>
-                                <td className="p-2 font-semibold text-right">₹{(item.quantity * item.unitPrice).toLocaleString()}</td>
+                                <td className="p-2 text-right">{formatIndianCurrency(item.unitPrice)}</td>
+                                <td className="p-2 font-semibold text-right">{formatIndianCurrency(item.quantity * item.unitPrice)}</td>
                             </tr>
                         ))}
                     </tbody>

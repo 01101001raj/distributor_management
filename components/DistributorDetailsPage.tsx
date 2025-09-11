@@ -1,6 +1,3 @@
-
-
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/mockApiService';
@@ -13,6 +10,7 @@ import Select from './common/Select';
 import { useAuth } from '../hooks/useAuth';
 import EditOrderModal from './EditOrderModal';
 import { useForm, SubmitHandler } from 'react-hook-form';
+import { formatIndianCurrency } from '../utils/formatting';
 
 const DistributorDetailsPage: React.FC = () => {
   const { distributorId } = useParams<{ distributorId: string }>();
@@ -55,8 +53,7 @@ const DistributorDetailsPage: React.FC = () => {
         } else {
           setDistributor(distributorData);
           setOrders(ordersData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-          // Sort from newest to oldest for display, even though API calculates oldest to newest.
-          setTransactions(transactionsData.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())); 
+          setTransactions(transactionsData); 
           setSpecialPrices(specialPricesData);
           setSchemes(schemesData);
           setSkus(skusData);
@@ -146,7 +143,21 @@ const DistributorDetailsPage: React.FC = () => {
         <Card className="lg:col-span-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-text-primary">{distributor.name}</h2>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <h2 className="text-2xl font-bold text-text-primary">{distributor.name}</h2>
+                <div className="flex items-center gap-2">
+                    {distributor.hasSpecialPricing && (
+                        <span className="flex items-center gap-1 bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                            <Star size={12} /> Special Pricing
+                        </span>
+                    )}
+                    {distributor.hasSpecialSchemes && (
+                        <span className="flex items-center gap-1 bg-blue-100 text-primary text-xs font-medium px-2.5 py-0.5 rounded-full">
+                            <Sparkles size={12} /> Special Schemes
+                        </span>
+                    )}
+                </div>
+              </div>
               <p className="font-mono text-xs text-text-secondary mt-1">{distributor.id}</p>
             </div>
             <div className="mt-4 sm:mt-0 text-left sm:text-right">
@@ -167,7 +178,7 @@ const DistributorDetailsPage: React.FC = () => {
             <div className="space-y-4">
                  <div>
                     <div className="flex items-center text-sm text-text-secondary"><Wallet size={16} className="mr-2"/> Wallet Balance</div>
-                    <p className="text-2xl font-bold text-text-primary">₹{distributor.walletBalance.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-text-primary">{formatIndianCurrency(distributor.walletBalance)}</p>
                 </div>
             </div>
         </Card>
@@ -196,10 +207,10 @@ const DistributorDetailsPage: React.FC = () => {
                         <td className="p-2 text-xs text-text-secondary whitespace-nowrap">{new Date(t.date).toLocaleString()}</td>
                         <td className="p-2 capitalize font-medium">{t.type.replace('_', ' ').toLowerCase()}</td>
                         <td className={`p-2 font-semibold text-right ${t.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {t.amount >= 0 ? '+' : ''}₹{t.amount.toLocaleString()}
+                          {t.amount >= 0 ? `+${formatIndianCurrency(t.amount)}` : formatIndianCurrency(t.amount)}
                         </td>
                         <td className="p-2 font-bold text-right text-text-primary">
-                          ₹{t.balanceAfter.toLocaleString()}
+                          {formatIndianCurrency(t.balanceAfter)}
                         </td>
                       </tr>
                     ))}
@@ -235,7 +246,7 @@ const DistributorDetailsPage: React.FC = () => {
                                   <td className="p-2 font-mono text-xs cursor-pointer" onClick={() => toggleExpand(o.id)}>{o.id}</td>
                                   <td className="p-2 text-sm cursor-pointer" onClick={() => toggleExpand(o.id)}>{new Date(o.date).toLocaleDateString()}</td>
                                   <td className="p-2 cursor-pointer" onClick={() => toggleExpand(o.id)}>{getStatusChip(o.status)}</td>
-                                  <td className="p-2 font-semibold text-right cursor-pointer" onClick={() => toggleExpand(o.id)}>₹{o.totalAmount.toLocaleString()}</td>
+                                  <td className="p-2 font-semibold text-right cursor-pointer" onClick={() => toggleExpand(o.id)}>{formatIndianCurrency(o.totalAmount)}</td>
                               </tr>
                                {o.status === OrderStatus.PENDING && (
                                   <tr className="border-b border-border last:border-0">
@@ -307,8 +318,8 @@ const OrderDetails: React.FC<{ orderId: string }> = ({ orderId }) => {
                             <tr key={index} className={`border-b border-border last:border-none ${item.isFreebie ? 'bg-green-50' : ''}`}>
                                 <td className="p-2">{item.skuName} {item.isFreebie && <Gift size={12} className="inline ml-1 text-green-700"/>}</td>
                                 <td className="p-2 text-center">{item.quantity}</td>
-                                <td className="p-2 text-right">₹{item.unitPrice.toLocaleString()}</td>
-                                <td className="p-2 font-semibold text-right">₹{(item.quantity * item.unitPrice).toLocaleString()}</td>
+                                <td className="p-2 text-right">{formatIndianCurrency(item.unitPrice)}</td>
+                                <td className="p-2 font-semibold text-right">{formatIndianCurrency(item.quantity * item.unitPrice)}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -427,7 +438,7 @@ const SpecialPricesManager: React.FC<{ distributorId: string; initialPrices: Spe
                         <tr className="border-b border-border">
                             <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Product</th>
                             <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center">Default Price</th>
-                            <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center">{isEditing ? 'Special Price (₹)' : 'Special Price'}</th>
+                            <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center">{isEditing ? 'Special Price' : 'Special Price'}</th>
                             {isEditing && <>
                                 <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center">Start Date</th>
                                 <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center">End Date</th>
@@ -442,7 +453,7 @@ const SpecialPricesManager: React.FC<{ distributorId: string; initialPrices: Spe
                                 return (
                                     <tr key={sku.id} className="border-b border-border last:border-b-0">
                                         <td className="p-2 font-medium">{sku.name}</td>
-                                        <td className="p-2 text-center text-text-secondary">₹{sku.price.toLocaleString()}</td>
+                                        <td className="p-2 text-center text-text-secondary">{formatIndianCurrency(sku.price)}</td>
                                         <td className="p-2 min-w-[120px]"><Input type="number" placeholder="Default" value={edited.price ?? ''} onChange={(e) => handleInputChange(sku.id, 'price', e.target.value)} error={error.price} /></td>
                                         <td className="p-2 min-w-[160px]"><Input type="date" value={edited.startDate ?? ''} onChange={(e) => handleInputChange(sku.id, 'startDate', e.target.value)} error={error.startDate} /></td>
                                         <td className="p-2 min-w-[200px]"><Input type="date" value={edited.endDate ?? ''} onChange={(e) => handleInputChange(sku.id, 'endDate', e.target.value)} error={error.endDate} /></td>
@@ -453,9 +464,9 @@ const SpecialPricesManager: React.FC<{ distributorId: string; initialPrices: Spe
                                 return (
                                     <tr key={sku.id} className="border-b border-border last:border-b-0">
                                         <td className="p-3 font-medium">{sku.name}</td>
-                                        <td className="p-3 text-center text-text-secondary">₹{sku.price.toLocaleString()}</td>
+                                        <td className="p-3 text-center text-text-secondary">{formatIndianCurrency(sku.price)}</td>
                                         <td className={`p-3 font-semibold text-center ${special ? 'text-text-primary' : 'text-text-secondary opacity-60'}`}>
-                                            {special ? `₹${special.price.toLocaleString()}` : 'N/A'}
+                                            {special ? formatIndianCurrency(special.price) : 'N/A'}
                                             {special && <p className="text-xs font-normal text-text-secondary">({special.startDate} to {special.endDate})</p>}
                                         </td>
                                     </tr>
@@ -482,12 +493,21 @@ const SpecialSchemesManager: React.FC<{ distributorId: string; initialSchemes: S
     const { userRole } = useAuth();
     const [editingSchemeId, setEditingSchemeId] = useState<string | null>(null);
 
-    const { register, handleSubmit, formState: { errors, isValid }, reset } = useForm<SchemeFormInputs>({
+    const { register, handleSubmit, formState: { errors, isValid }, reset, watch } = useForm<SchemeFormInputs>({
         mode: 'onBlur',
     });
+    const watchStartDate = watch('startDate');
 
     const handleAddNew = () => {
-        reset({ buySkuId: skus[0]?.id || '', getSkuId: skus[0]?.id || '', buyQuantity: 1, getQuantity: 1, description: '' });
+        reset({ 
+            buySkuId: skus[0]?.id || '', 
+            getSkuId: skus[0]?.id || '', 
+            buyQuantity: 1, 
+            getQuantity: 1, 
+            description: '',
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: '',
+        });
         setEditingSchemeId('new');
     };
 
@@ -545,6 +565,15 @@ const SpecialSchemesManager: React.FC<{ distributorId: string; initialSchemes: S
                     <Select {...register('getSkuId', { required: true })}>{skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
                 </div>
             </td>
+            <td className="p-2 min-w-[160px]">
+                <Input type="date" {...register('startDate', { required: true })} error={errors.startDate?.message} />
+            </td>
+            <td className="p-2 min-w-[160px]">
+                <Input type="date" {...register('endDate', { 
+                    required: true, 
+                    validate: (value) => !watchStartDate || value >= watchStartDate || 'End date must be on or after start date' 
+                })} error={errors.endDate?.message} />
+            </td>
             <td className="p-2 text-right space-x-2">
                 <Button onClick={handleSubmit(onSave)} size="sm" className="p-2" disabled={!isValid}><Save size={16} /></Button>
                 <Button onClick={handleCancel} variant="secondary" size="sm" className="p-2"><X size={16} /></Button>
@@ -560,12 +589,14 @@ const SpecialSchemesManager: React.FC<{ distributorId: string; initialSchemes: S
             </div>
             
             <div className="overflow-x-auto">
-                <table className="w-full text-left min-w-[700px]">
+                <table className="w-full text-left min-w-[1000px]">
                     <thead className="bg-background">
                         <tr className="border-b border-border">
-                            <th className="p-3 w-1/3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Description</th>
+                            <th className="p-3 w-1/4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Description</th>
                             <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Buy</th>
                             <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Get Free</th>
+                            <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Start Date</th>
+                            <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">End Date</th>
                             {canEdit && <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Actions</th>}
                         </tr>
                     </thead>
@@ -579,6 +610,8 @@ const SpecialSchemesManager: React.FC<{ distributorId: string; initialSchemes: S
                                     <td className="p-3">{s.description}</td>
                                     <td className="p-3">{s.buyQuantity} x {getSkuName(s.buySkuId)}</td>
                                     <td className="p-3">{s.getQuantity} x {getSkuName(s.getSkuId)}</td>
+                                    <td className="p-3">{s.startDate}</td>
+                                    <td className="p-3">{s.endDate}</td>
                                     {canEdit && 
                                         <td className="p-3 text-right space-x-2">
                                             <Button onClick={() => handleEdit(s)} variant="secondary" size="sm" className="p-2" disabled={!!editingSchemeId}><Edit size={16}/></Button>
@@ -589,7 +622,7 @@ const SpecialSchemesManager: React.FC<{ distributorId: string; initialSchemes: S
                             )
                         ))}
                         {initialSchemes.length === 0 && editingSchemeId !== 'new' && (
-                            <tr><td colSpan={canEdit ? 4 : 3} className="text-center p-4 text-gray-500">No special schemes assigned to this distributor.</td></tr>
+                            <tr><td colSpan={canEdit ? 6 : 5} className="text-center p-4 text-gray-500">No special schemes assigned to this distributor.</td></tr>
                         )}
                     </tbody>
                 </table>

@@ -5,6 +5,7 @@ import { Distributor, Order, OrderStatus } from '../types';
 import Card from './common/Card';
 import { DollarSign, Search, Users, Package } from 'lucide-react';
 import Input from './common/Input';
+import { formatIndianCurrency } from '../utils/formatting';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -59,6 +60,17 @@ const Dashboard: React.FC = () => {
     }).sort((a, b) => a.walletBalance - b.walletBalance);
   }, [distributors, orders]);
 
+  const financialTotals = useMemo(() => {
+    return distributorFinancials.reduce(
+      (acc, curr) => {
+        acc.totalBalance += curr.walletBalance;
+        acc.totalPending += curr.pendingOrderTotal;
+        return acc;
+      },
+      { totalBalance: 0, totalPending: 0 }
+    );
+  }, [distributorFinancials]);
+
 
   if (loading) {
     return <div className="flex justify-center items-center h-full"><p>Loading dashboard...</p></div>;
@@ -74,7 +86,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-text-secondary">Total Sales (Delivered)</p>
-              <p className="text-2xl font-bold">₹{totalSales.toLocaleString()}</p>
+              <p className="text-2xl font-bold">{formatIndianCurrency(totalSales)}</p>
             </div>
           </div>
         </Card>
@@ -130,7 +142,7 @@ const Dashboard: React.FC = () => {
                 {filteredDistributors.map(d => (
                   <tr key={d.id} onClick={() => navigate(`/distributors/${d.id}`)} className="border-b border-border last:border-b-0 hover:bg-background cursor-pointer">
                     <td className="p-3 font-mono text-xs text-text-secondary">{d.id}</td>
-                    <td className="p-3 font-medium text-text-primary">{d.name}</td>
+                    <td className="p-3 font-semibold text-primary hover:underline">{d.name}</td>
                     <td className="p-3 text-text-primary">{d.state}</td>
                     <td className="p-3 text-text-primary">{d.area}</td>
                   </tr>
@@ -160,19 +172,30 @@ const Dashboard: React.FC = () => {
                             return (
                                 <tr key={d.id} className="border-b border-border last:border-b-0 hover:bg-background cursor-pointer" onClick={() => navigate(`/distributors/${d.id}`)}>
                                     <td className="p-2">
-                                        <p className="font-medium text-sm text-text-primary">{d.name}</p>
+                                        <p className="font-medium text-sm text-primary hover:underline">{d.name}</p>
                                         <p className="font-mono text-xs text-text-secondary">{d.id}</p>
                                     </td>
                                     <td className="p-2 text-right">
-                                        <p className="font-semibold text-text-primary">₹{d.walletBalance.toLocaleString()}</p>
+                                        <p className="font-semibold text-text-primary">{formatIndianCurrency(d.walletBalance)}</p>
                                     </td>
                                     <td className="p-2 text-right">
-                                        <p className="text-text-secondary">₹{d.pendingOrderTotal.toLocaleString()}</p>
+                                        <p className="text-text-secondary">{formatIndianCurrency(d.pendingOrderTotal)}</p>
                                     </td>
                                 </tr>
                             )
                         })}
                     </tbody>
+                    <tfoot className="bg-background border-t-2 border-border">
+                        <tr className="font-bold">
+                            <td className="p-2">Total</td>
+                            <td className="p-2 text-right">
+                                {formatIndianCurrency(financialTotals.totalBalance)}
+                            </td>
+                            <td className="p-2 text-right">
+                                {formatIndianCurrency(financialTotals.totalPending)}
+                            </td>
+                        </tr>
+                    </tfoot>
                 </table>
            </div>
         </Card>

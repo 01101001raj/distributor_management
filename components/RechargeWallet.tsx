@@ -9,6 +9,7 @@ import { api } from '../services/mockApiService';
 import { useAuth } from '../hooks/useAuth';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { formatIndianCurrency } from '../utils/formatting';
 
 interface FormInputs {
   distributorId: string;
@@ -39,12 +40,12 @@ const RechargeWallet: React.FC = () => {
   }, []);
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
-    if (window.confirm(`Are you sure you want to add ₹${Number(data.amount).toLocaleString()} to ${selectedDistributor?.name}'s wallet? This action cannot be undone.`)) {
+    if (window.confirm(`Are you sure you want to add ${formatIndianCurrency(Number(data.amount))} to ${selectedDistributor?.name}'s wallet? This action cannot be undone.`)) {
       setIsLoading(true);
       setStatusMessage(null);
       try {
         await api.rechargeWallet(data.distributorId, Number(data.amount), currentUser!.username);
-        setStatusMessage({ type: 'success', text: `₹${data.amount.toLocaleString()} successfully added to ${selectedDistributor?.name}'s account.` });
+        setStatusMessage({ type: 'success', text: `${formatIndianCurrency(data.amount)} successfully added to ${selectedDistributor?.name}'s account.` });
         // Refetch distributors to show updated balance
         api.getDistributors().then(setDistributors);
         reset({ distributorId: '', amount: 0, paymentMethod: 'Cash' });
@@ -83,14 +84,14 @@ const RechargeWallet: React.FC = () => {
             <div className="bg-blue-50 p-4 rounded-lg space-y-2">
                 <div className="flex justify-between items-center">
                     <span className="font-medium text-text-secondary">Current Wallet Balance:</span>
-                    <span className="font-bold text-black text-lg">₹{selectedDistributor.walletBalance.toLocaleString()}</span>
+                    <span className="font-bold text-black text-lg">{formatIndianCurrency(selectedDistributor.walletBalance)}</span>
                 </div>
             </div>
         )}
 
         <Input
           id="amount"
-          label="Recharge Amount (₹)"
+          label="Recharge Amount"
           type="number"
           {...register('amount', { 
             required: 'Amount is required', 

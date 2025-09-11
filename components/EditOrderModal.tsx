@@ -5,8 +5,9 @@ import Card from './common/Card';
 import Select from './common/Select';
 import Button from './common/Button';
 import { useAuth } from '../hooks/useAuth';
-import { PlusCircle, Trash2, Gift, Star, XCircle, TrendingUp, TrendingDown, Save } from 'lucide-react';
+import { PlusCircle, Trash2, Gift, Star, XCircle, TrendingUp, TrendingDown, Save, Copy } from 'lucide-react';
 import Input from './common/Input';
+import { formatIndianCurrency } from '../utils/formatting';
 
 interface EditOrderModalProps {
     order: Order;
@@ -94,7 +95,11 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
         const freebies = new Map<string, { quantity: number }>();
         const today = new Date().toISOString().split('T')[0];
         const activeSpecialPrices = distributorPrices.filter(p => p.startDate <= today && p.endDate >= today);
-        const applicableSchemes = distributorSchemes.length > 0 ? distributorSchemes : globalSchemes;
+
+        // Correctly filter schemes to only include active ones before applying logic
+        const activeDistributorSchemes = distributorSchemes.filter(s => s.startDate <= today && s.endDate >= today);
+        const activeGlobalSchemes = globalSchemes.filter(s => s.startDate <= today && s.endDate >= today);
+        const applicableSchemes = activeDistributorSchemes.length > 0 ? activeDistributorSchemes : activeGlobalSchemes;
 
         items.forEach(item => {
             const sku = skus.find(s => s.id === item.skuId);
@@ -159,6 +164,18 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
             setItems([...items, { id: Date.now().toString(), skuId: skus[0].id, quantity: 1 }]);
         }
     };
+    
+    const handleCopyItem = (itemToCopy: OrderItemState) => {
+        const newItem: OrderItemState = {
+            ...itemToCopy,
+            id: `${Date.now()}-${Math.random()}`, // New unique ID
+        };
+        const index = items.findIndex(item => item.id === itemToCopy.id);
+        const newItems = [...items];
+        newItems.splice(index + 1, 0, newItem);
+        setItems(newItems);
+    };
+
 
     const handleItemChange = (itemId: string, field: 'skuId' | 'quantity', value: string | number) => {
         setItems(items.map(item => item.id === itemId ? { ...item, [field]: value } : item));
@@ -177,14 +194,23 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
         }
     };
 
-    const handleRemoveItem = (itemId: string) => {
-        setItems(items.filter((item) => item.id !== itemId));
-        setItemErrors(prev => {
-            const newErrors = {...prev};
-            delete newErrors[itemId];
-            return newErrors;
-        });
+    const handleRemoveItem = (itemIdToRemove: string) => {
+        const item = items.find(i => i.id === itemIdToRemove);
+        if (!item) return;
+
+        const sku = skus.find(s => s.id === item.skuId);
+        const skuName = sku ? `'${sku.name}'` : 'this item';
+        
+        if (window.confirm(`Are you sure you want to remove ${skuName} from the order?`)) {
+            setItems(items.filter((item) => item.id !== itemIdToRemove));
+            setItemErrors(prev => {
+                const newErrors = {...prev};
+                delete newErrors[itemIdToRemove];
+                return newErrors;
+            });
+        }
     };
+
 
     const handleSaveChanges = async () => {
         if (!currentUser) return;
@@ -228,7 +254,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
                                             {skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                         </Select>
                                     </div>
-                                    <div className="col-span-9 sm:col-span-4">
+                                    <div className="col-span-8 sm:col-span-3">
                                         <Input
                                             type="number"
                                             value={item.quantity}
@@ -237,8 +263,9 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
                                             error={itemErrors[item.id]}
                                         />
                                     </div>
-                                    <div className="col-span-3 sm:col-span-1 text-right self-center">
-                                        <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={20}/></button>
+                                    <div className="col-span-4 sm:col-span-2 text-right self-center flex justify-end">
+                                        <button onClick={() => handleCopyItem(item)} className="text-blue-500 hover:text-blue-700 p-1" title="Duplicate Item"><Copy size={18}/></button>
+                                        <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-700 p-1" title="Remove Item"><Trash2 size={20}/></button>
                                     </div>
                                 </div>
                             ))}
@@ -261,8 +288,8 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
                                                 {item.hasSpecialPrice && <Star size={12} className="inline ml-2 text-yellow-500"/>}
                                             </td>
                                             <td className="p-2 text-center">{item.quantity}</td>
-                                            <td className="p-2 text-right">₹{item.unitPrice.toLocaleString()}</td>
-                                            <td className="p-2 text-right font-semibold">₹{(item.quantity * item.unitPrice).toLocaleString()}</td>
+                                            <td className="p-2 text-right">{formatIndianCurrency(item.unitPrice)}</td>
+                                            <td className="p-2 text-right font-semibold">{formatIndianCurrency(item.quantity * item.unitPrice)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -273,13 +300,13 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
                     <Card className="bg-blue-50">
                         <h3 className="font-semibold mb-2 text-black">Financial Impact</h3>
                         <div className="space-y-2 text-sm">
-                            <div className="flex justify-between"><span>Original Total:</span> <span className="font-medium">₹{order.totalAmount.toLocaleString()}</span></div>
-                            <div className="flex justify-between"><span>New Total:</span> <span className="font-medium">₹{subtotal.toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span>Original Total:</span> <span className="font-medium">{formatIndianCurrency(order.totalAmount)}</span></div>
+                            <div className="flex justify-between"><span>New Total:</span> <span className="font-medium">{formatIndianCurrency(subtotal)}</span></div>
                             <div className={`flex justify-between border-t pt-2 mt-2 font-bold ${delta > 0 ? 'text-red-600' : 'text-green-600'}`}>
                                 <span>Difference:</span>
                                 <span className="flex items-center">
                                     {delta !== 0 && (delta > 0 ? <TrendingUp size={16} className="mr-1"/> : <TrendingDown size={16} className="mr-1"/>)}
-                                    ₹{Math.abs(delta).toLocaleString()}
+                                    {formatIndianCurrency(Math.abs(delta))}
                                 </span>
                             </div>
                         </div>

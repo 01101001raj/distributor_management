@@ -13,7 +13,7 @@ interface FormInputs {
 
 const LoginPage: React.FC = () => {
   const { register, handleSubmit, formState: { errors, isValid } } = useForm<FormInputs>({
-    mode: 'onBlur',
+    mode: 'onChange',
     defaultValues: {
       username: '',
       password: '',

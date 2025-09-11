@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useEffect, useState } from 'react';
 import Card from './common/Card';
 import Button from './common/Button';
@@ -10,6 +11,7 @@ import { SKU, UserRole } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { PlusCircle, Edit, Save, X } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
+import { formatIndianCurrency } from '../utils/formatting';
 
 type SkuFormInputs = Omit<SKU, 'id'> & { id?: string };
 
@@ -130,7 +132,7 @@ const ManageSKUs: React.FC = () => {
                 <tr key={sku.id} className="border-b border-border hover:bg-background">
                   <td className="p-3 font-mono text-xs text-text-secondary">{sku.id}</td>
                   <td className="p-3">{sku.name}</td>
-                  <td className="p-3">₹{sku.price.toLocaleString()}</td>
+                  <td className="p-3">{formatIndianCurrency(sku.price)}</td>
                   <td className="p-3 text-right">
                     <Button onClick={() => handleEdit(sku)} variant="secondary" size="sm" className="p-2" disabled={!!editingSkuId}><Edit size={16}/></Button>
                   </td>

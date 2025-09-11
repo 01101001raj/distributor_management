@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useEffect, useState, useCallback } from 'react';
 import Card from './common/Card';
 import Button from './common/Button';
@@ -21,9 +22,10 @@ const ManageSchemes: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editingSchemeId, setEditingSchemeId] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors, isValid }, reset } = useForm<SchemeFormInputs>({
+  const { register, handleSubmit, formState: { errors, isValid }, reset, watch } = useForm<SchemeFormInputs>({
     mode: 'onBlur'
   });
+  const watchStartDate = watch('startDate');
 
   const fetchSchemes = useCallback(() => {
     setLoading(true);
@@ -81,6 +83,8 @@ const ManageSchemes: React.FC = () => {
       buyQuantity: 10,
       getSkuId: skus[0]?.id || '',
       getQuantity: 1,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: '',
     });
     setEditingSchemeId('new');
     setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
@@ -107,6 +111,23 @@ const ManageSchemes: React.FC = () => {
                   {...register('description', { required: 'Description is required' })}
                   error={errors.description?.message}
                 />
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    <Input 
+                        label="Start Date"
+                        type="date"
+                        {...register('startDate', { required: 'Start date is required' })}
+                        error={errors.startDate?.message}
+                    />
+                    <Input 
+                        label="End Date"
+                        type="date"
+                        {...register('endDate', { 
+                            required: 'End date is required',
+                            validate: (value) => !watchStartDate || value >= watchStartDate || 'End date must be on or after start date'
+                        })}
+                        error={errors.endDate?.message}
+                    />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                     <Card className="bg-background">
                         <h4 className="font-semibold mb-2 text-text-primary">Condition (Buy)</h4>
@@ -173,7 +194,12 @@ const ManageSchemes: React.FC = () => {
             <tbody>
               {schemes.map(scheme => (
                 <tr key={scheme.id} className="border-b border-border hover:bg-background">
-                  <td className="p-3 w-1/3 font-semibold">{scheme.description}</td>
+                  <td className="p-3 w-1/3 font-semibold">
+                    {scheme.description}
+                    <p className="text-xs font-normal text-text-secondary mt-1">
+                        Active: {scheme.startDate} to {scheme.endDate}
+                    </p>
+                  </td>
                   <td className="p-3">
                     Buy {scheme.buyQuantity} x <span className="font-medium">{getSkuName(scheme.buySkuId)}</span>, 
                     Get {scheme.getQuantity} x <span className="font-medium text-green-600">{getSkuName(scheme.getSkuId)}</span> Free
