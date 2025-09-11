@@ -88,7 +88,7 @@ const Invoice: React.FC = () => {
             const searchParams = new URLSearchParams(location.search);
             if (searchParams.get('download') === 'true') {
                 if (invoiceData && invoicePrintRef.current) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     await handleDownloadPdf();
                     window.close();
                 }
