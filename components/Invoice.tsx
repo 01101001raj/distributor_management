@@ -20,7 +20,6 @@ const Invoice: React.FC = () => {
     const invoicePrintRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // Load company details from localStorage
         try {
             const savedDetails = localStorage.getItem(COMPANY_DETAILS_KEY);
             if (savedDetails) {
@@ -63,63 +62,40 @@ const Invoice: React.FC = () => {
         }
 
         try {
-            const canvas = await html2canvas(elementToCapture, {
-                scale: 2, // Use a higher scale for better resolution
-                useCORS: true,
-            });
-            
+            const canvas = await html2canvas(elementToCapture, { scale: 2, useCORS: true });
             const imgData = canvas.toDataURL('image/png');
-            
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
-            });
-
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-            
             const canvasAspectRatio = canvas.width / canvas.height;
-
-            // Calculate final image dimensions to fit within the A4 page while preserving aspect ratio
             let finalWidth = pdfWidth;
             let finalHeight = pdfWidth / canvasAspectRatio;
-
             if (finalHeight > pdfHeight) {
                 finalHeight = pdfHeight;
                 finalWidth = pdfHeight * canvasAspectRatio;
             }
-
-            // Center the image horizontally
             const xOffset = (pdfWidth - finalWidth) / 2;
-            
             pdf.addImage(imgData, 'PNG', xOffset, 0, finalWidth, finalHeight);
             pdf.save(`invoice-${orderId}.pdf`);
-
         } catch (error) {
             console.error("Error generating PDF:", error);
             alert("Sorry, there was an error generating the PDF.");
         }
     };
 
-    // Effect to handle automatic download and closing of the window
     useEffect(() => {
         const autoDownloadAndClose = async () => {
             const searchParams = new URLSearchParams(location.search);
             if (searchParams.get('download') === 'true') {
-                // We must wait for data to be loaded and component to be rendered
                 if (invoiceData && invoicePrintRef.current) {
-                    // A short delay helps ensure all styles and images are applied before capture
                     await new Promise(resolve => setTimeout(resolve, 500));
                     await handleDownloadPdf();
                     window.close();
                 }
             }
         };
-
         autoDownloadAndClose();
     }, [invoiceData, location.search]);
-
 
     if (loading) {
         return <div className="p-8 text-center bg-background min-h-screen">Loading Invoice...</div>;
@@ -149,106 +125,77 @@ const Invoice: React.FC = () => {
         <>
             <style>{`
                 @media print {
-                    body {
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                        background-color: #fff;
-                    }
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #fff; }
                     .no-print { display: none !important; }
-                    .invoice-container {
-                        box-shadow: none !important;
-                        margin: 0 !important;
-                        border: none !important;
-                        padding: 0 !important;
-                    }
-                    .print-table th {
-                        background-color: #F8F9FA !important;
-                    }
+                    .invoice-container { box-shadow: none !important; margin: 0 !important; border: none !important; padding: 0 !important; max-width: 100% !important; }
+                    .print-table th { background-color: #F8F9FA !important; }
                 }
             `}</style>
             <div className="bg-slate-100 min-h-screen p-4 sm:p-8">
-                 <div className="max-w-5xl mx-auto">
+                 <div className="max-w-4xl mx-auto">
                     <div className="mb-4 text-right no-print">
                         <Button onClick={handleDownloadPdf}>
-                            <Download size={16}/>
-                            Download PDF
+                            <Download size={16}/> Download PDF
                         </Button>
                     </div>
-                    <div ref={invoicePrintRef} className="w-full bg-white shadow-lg p-8 sm:p-10 border invoice-container">
-                        <header className="flex justify-between items-start pb-6 border-b-2 border-primary">
+                    <div ref={invoicePrintRef} className="w-full bg-white shadow-lg p-8 sm:p-12 border invoice-container">
+                        <header className="flex justify-between items-start pb-6 border-b">
                             <div>
-                                <h1 className="text-3xl font-bold text-primary">TAX INVOICE</h1>
-                                <p className="font-semibold text-text-primary mt-2">{companyDetails?.companyName || '[Your Company Name]'}</p>
-                                <p className="text-text-secondary text-sm">{companyDetails?.addressLine1 || '[Your Address Line 1]'}</p>
-                                <p className="text-text-secondary text-sm">{companyDetails?.addressLine2 || '[City, State, PIN]'}</p>
-                                <p className="text-text-secondary text-sm">Email: {companyDetails?.email || '[your.email@company.com]'}</p>
+                                <p className="font-bold text-lg text-text-primary">{companyDetails?.companyName || '[Your Company Name]'}</p>
+                                <p className="text-sm text-text-secondary">{companyDetails?.addressLine1 || '[Your Address Line 1]'}</p>
+                                <p className="text-sm text-text-secondary">{companyDetails?.addressLine2 || '[City, State, PIN]'}</p>
+                                <p className="text-sm text-text-secondary">Email: {companyDetails?.email || '[your.email@company.com]'}</p>
+                                <p className="text-sm text-text-secondary mt-2">GSTIN: <span className="font-mono">{companyDetails?.gstin || '[YOUR_GSTIN]'}</span></p>
                             </div>
                             <div className="text-right">
-                                <p className="font-semibold">Invoice No: <span className="font-mono">{order.id}</span></p>
-                                <p>Date: <span className="font-medium">{new Date(order.date).toLocaleDateString()}</span></p>
-                                <p className="mt-2 font-semibold">GSTIN: <span className="font-mono">{companyDetails?.gstin || '[YOUR_GSTIN]'}</span></p>
+                                <h1 className="text-3xl font-bold text-primary">INVOICE</h1>
+                                <p className="mt-2">Invoice No: <span className="font-semibold font-mono">{order.id}</span></p>
+                                <p>Date: <span className="font-semibold">{new Date(order.date).toLocaleDateString()}</span></p>
                             </div>
                         </header>
 
-                        <section className="grid grid-cols-2 gap-8 my-6 text-sm">
-                            <div>
-                                <h2 className="text-sm font-semibold text-text-secondary mb-2">BILLED TO:</h2>
-                                <p className="font-bold text-text-primary">{distributor.name}</p>
-                                <p className="text-text-secondary">{distributor.area}, {distributor.state}</p>
-                                <p className="text-text-secondary">{distributor.phone}</p>
-                            </div>
+                        <section className="my-8 text-sm">
+                            <h2 className="text-xs font-bold uppercase text-text-secondary mb-2">Billed To</h2>
+                            <p className="font-bold text-text-primary">{distributor.name}</p>
+                            <p className="text-text-secondary">{distributor.area}, {distributor.state}</p>
+                            <p className="text-text-secondary">{distributor.phone}</p>
                         </section>
 
                         <section className="w-full overflow-x-auto">
-                            <table className="min-w-full text-left text-sm">
+                             <table className="min-w-full text-left text-sm">
                                 <thead className="bg-slate-50 print-table">
                                     <tr>
                                         <th className="p-3 font-semibold text-text-secondary uppercase w-8">#</th>
                                         <th className="p-3 font-semibold text-text-secondary uppercase">Item & HSN</th>
                                         <th className="p-3 font-semibold text-text-secondary uppercase text-center">Qty</th>
-                                        <th className="p-3 font-semibold text-text-secondary uppercase text-right">Rate</th>
+                                        <th className="p-3 font-semibold text-text-secondary uppercase text-right">Unit Price</th>
                                         <th className="p-3 font-semibold text-text-secondary uppercase text-right">Taxable Value</th>
-                                        <th className="p-3 font-semibold text-text-secondary uppercase text-center">GST</th>
-                                        <th className="p-3 font-semibold text-text-secondary uppercase text-right">CGST</th>
-                                        <th className="p-3 font-semibold text-text-secondary uppercase text-right">SGST</th>
-                                        <th className="p-3 font-semibold text-text-secondary uppercase text-right">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {items.map((item, index) => {
-                                        const isTaxable = !item.isFreebie;
-                                        const taxableValue = isTaxable ? item.quantity * item.unitPrice : 0;
-                                        const cgst = isTaxable ? taxableValue * CGST_RATE : 0;
-                                        const sgst = isTaxable ? taxableValue * SGST_RATE : 0;
-                                        const total = isTaxable ? taxableValue + cgst + sgst : 0;
-                                        return (
-                                            <tr key={index} className={`border-b ${item.isFreebie ? 'bg-green-50' : ''}`}>
-                                                <td className="p-3 text-text-secondary">{index + 1}</td>
-                                                <td className="p-3 font-medium text-text-primary">
-                                                    {item.skuName} {item.isFreebie && <span className="text-green-600 font-normal">(Freebie)</span>}
-                                                    <span className="block text-xs text-text-secondary">HSN: {item.hsnCode}</span>
-                                                </td>
-                                                <td className="p-3 text-center text-text-primary">{item.quantity}</td>
-                                                <td className="p-3 text-right text-text-primary">{isTaxable ? formatIndianCurrency(item.unitPrice, currencyOptions) : 'FREE'}</td>
-                                                <td className="p-3 text-right text-text-primary">{formatIndianCurrency(taxableValue, currencyOptions)}</td>
-                                                <td className="p-3 text-center text-text-secondary">{isTaxable ? `${GST_RATE * 100}%` : '-'}</td>
-                                                <td className="p-3 text-right text-text-secondary">{formatIndianCurrency(cgst, currencyOptions)}</td>
-                                                <td className="p-3 text-right text-text-secondary">{formatIndianCurrency(sgst, currencyOptions)}</td>
-                                                <td className="p-3 text-right font-semibold text-text-primary">{formatIndianCurrency(total, currencyOptions)}</td>
-                                            </tr>
-                                        );
-                                    })}
+                                    {items.map((item, index) => (
+                                        <tr key={index} className={`border-b ${item.isFreebie ? 'bg-green-50' : ''}`}>
+                                            <td className="p-3 text-text-secondary">{index + 1}</td>
+                                            <td className="p-3 font-medium text-text-primary">
+                                                {item.skuName} {item.isFreebie && <span className="text-green-600 font-normal">(Freebie)</span>}
+                                                <span className="block text-xs text-text-secondary">HSN: {item.hsnCode}</span>
+                                            </td>
+                                            <td className="p-3 text-center text-text-primary">{item.quantity}</td>
+                                            <td className="p-3 text-right text-text-primary">{!item.isFreebie ? formatIndianCurrency(item.unitPrice, currencyOptions) : 'FREE'}</td>
+                                            <td className="p-3 text-right font-semibold text-text-primary">{formatIndianCurrency(item.quantity * item.unitPrice, currencyOptions)}</td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </section>
                         
-                        <section className="flex flex-col sm:flex-row justify-end mt-6 text-sm">
-                            <div className="w-full sm:w-1/2 md:w-2/3">
-                                 <p className="font-semibold mb-2">Amount in Words:</p>
-                                 <p className="text-text-secondary italic">{numberToWordsInRupees(grandTotal)}</p>
+                        <section className="flex flex-col-reverse sm:flex-row justify-between items-start mt-8 text-sm">
+                            <div className="w-full sm:w-1/2 mt-8 sm:mt-0">
+                                <p className="font-semibold text-text-primary mb-2">Amount in Words:</p>
+                                <p className="text-text-secondary italic capitalize">{numberToWordsInRupees(grandTotal)}</p>
                             </div>
-                            <div className="w-full sm:w-1/2 md:w-1/3 space-y-2 mt-4 sm:mt-0">
-                                 <div className="flex justify-between">
+                            <div className="w-full sm:w-1/2 md:w-2/5 space-y-2">
+                                <div className="flex justify-between">
                                     <span className="text-text-secondary">Subtotal</span>
                                     <span className="font-semibold text-text-primary">{formatIndianCurrency(subtotal, currencyOptions)}</span>
                                 </div>
@@ -260,26 +207,26 @@ const Invoice: React.FC = () => {
                                     <span className="text-text-secondary">SGST ({SGST_RATE * 100}%)</span>
                                     <span className="text-text-primary">{formatIndianCurrency(totalSgst, currencyOptions)}</span>
                                 </div>
-                                <div className="flex justify-between border-t-2 border-primary pt-2 mt-2">
+                                <div className="flex justify-between bg-slate-50 p-2 rounded-md mt-2">
                                     <span className="text-text-primary font-bold text-base">GRAND TOTAL</span>
                                     <span className="font-bold text-base text-primary">{formatIndianCurrency(grandTotal, currencyOptions)}</span>
                                 </div>
                             </div>
                         </section>
-
+                        
                         <footer className="text-xs text-text-secondary mt-12 border-t pt-4">
                             <div className="flex justify-between items-end">
                                 <div>
                                     <p className="font-semibold">Terms & Conditions:</p>
                                     <p>1. All payments must be made in full within 30 days.</p>
-                                    <p>Generated By: {order.placedByExecId}</p>
+                                    <p>2. Generated By: {order.placedByExecId}</p>
                                 </div>
                                 <div className="w-48 text-center">
                                     <div className="border-b h-12"></div>
                                     <p className="mt-1">Authorised Signatory</p>
                                 </div>
                             </div>
-                            <p className="text-center mt-6">This is a computer-generated invoice.</p>
+                             <p className="text-center mt-6">This is a computer-generated invoice.</p>
                         </footer>
                     </div>
                 </div>
