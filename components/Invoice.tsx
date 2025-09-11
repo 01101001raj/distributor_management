@@ -1,23 +1,35 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useParams, useLocation } from 'react-router-dom';
 import { api } from '../services/mockApiService';
-import { InvoiceData } from '../types';
+import { InvoiceData, CompanyDetails } from '../types';
 import Button from './common/Button';
-import { Printer } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { formatIndianCurrency, numberToWordsInRupees } from '../utils/formatting';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
-const GST_RATE = 0.18; // 18%
-const CGST_RATE = GST_RATE / 2;
-const SGST_RATE = GST_RATE / 2;
-const COMPANY_GSTIN = "27ABCDE1234F1Z5"; // Example GSTIN
+const COMPANY_DETAILS_KEY = 'companyDetails';
 
 const Invoice: React.FC = () => {
     const { orderId } = useParams<{ orderId: string }>();
+    const location = useLocation();
     const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
+    const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const invoicePrintRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        // Load company details from localStorage
+        try {
+            const savedDetails = localStorage.getItem(COMPANY_DETAILS_KEY);
+            if (savedDetails) {
+                setCompanyDetails(JSON.parse(savedDetails));
+            }
+        } catch (e) {
+            console.error("Failed to load company details", e);
+        }
+
         if (!orderId) {
             setError("No Order ID provided.");
             setLoading(false);
@@ -42,6 +54,63 @@ const Invoice: React.FC = () => {
 
         fetchInvoiceData();
     }, [orderId]);
+    
+    const handleDownloadPdf = async () => {
+        const elementToCapture = invoicePrintRef.current;
+        if (!elementToCapture || !orderId) {
+            console.error("Invoice element or orderId not found");
+            return;
+        }
+
+        try {
+            const canvas = await html2canvas(elementToCapture, {
+                scale: 2, // Use a higher scale for better resolution
+                useCORS: true,
+            });
+            
+            const imgData = canvas.toDataURL('image/png');
+            
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+            });
+
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const canvasAspectRatio = canvasWidth / canvasHeight;
+            
+            // Calculate the height of the image in the PDF to maintain aspect ratio
+            const pdfHeight = pdfWidth / canvasAspectRatio;
+
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`invoice-${orderId}.pdf`);
+
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            alert("Sorry, there was an error generating the PDF.");
+        }
+    };
+
+    // Effect to handle automatic download and closing of the window
+    useEffect(() => {
+        const autoDownloadAndClose = async () => {
+            const searchParams = new URLSearchParams(location.search);
+            if (searchParams.get('download') === 'true') {
+                // We must wait for data to be loaded and component to be rendered
+                if (invoiceData && invoicePrintRef.current) {
+                    // A short delay helps ensure all styles and images are applied before capture
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await handleDownloadPdf();
+                    window.close();
+                }
+            }
+        };
+
+        autoDownloadAndClose();
+    }, [invoiceData, location.search]);
+
 
     if (loading) {
         return <div className="p-8 text-center bg-background min-h-screen">Loading Invoice...</div>;
@@ -60,6 +129,9 @@ const Invoice: React.FC = () => {
     
     const taxableItems = items.filter(item => !item.isFreebie);
     const subtotal = taxableItems.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
+    const GST_RATE = 0.18; // 18%
+    const CGST_RATE = GST_RATE / 2;
+    const SGST_RATE = GST_RATE / 2;
     const totalCgst = subtotal * CGST_RATE;
     const totalSgst = subtotal * SGST_RATE;
     const grandTotal = subtotal + totalCgst + totalSgst;
@@ -87,25 +159,26 @@ const Invoice: React.FC = () => {
             `}</style>
             <div className="bg-slate-100 min-h-screen p-4 sm:p-8 flex flex-col items-center no-print">
                  <div className="w-full max-w-4xl mx-auto mb-4 text-right">
-                    <Button onClick={() => window.print()}>
-                        <Printer size={16}/>
-                        Print Invoice
+                    <Button onClick={handleDownloadPdf}>
+                        <Download size={16}/>
+                        Download PDF
                     </Button>
                 </div>
             </div>
             <div className="bg-slate-100 p-4 sm:p-8 flex flex-col items-center">
-                <div className="w-full max-w-4xl mx-auto bg-white shadow-lg p-8 sm:p-12 border invoice-container">
+                <div ref={invoicePrintRef} className="w-full max-w-4xl mx-auto bg-white shadow-lg p-8 sm:p-12 border invoice-container">
                     <header className="flex justify-between items-start pb-6 border-b-2 border-primary">
                         <div>
                             <h1 className="text-3xl font-bold text-primary">TAX INVOICE</h1>
-                            <p className="font-semibold text-text-primary mt-2">Your Company Name</p>
-                            <p className="text-text-secondary text-sm">123 Business Rd, Business City, Maharashtra, 400001</p>
-                            <p className="text-text-secondary text-sm">Email: contact@yourcompany.com</p>
+                            <p className="font-semibold text-text-primary mt-2">{companyDetails?.companyName || '[Your Company Name]'}</p>
+                            <p className="text-text-secondary text-sm">{companyDetails?.addressLine1 || '[Your Address Line 1]'}</p>
+                            <p className="text-text-secondary text-sm">{companyDetails?.addressLine2 || '[City, State, PIN]'}</p>
+                            <p className="text-text-secondary text-sm">Email: {companyDetails?.email || '[your.email@company.com]'}</p>
                         </div>
                         <div className="text-right">
                             <p className="font-semibold">Invoice No: <span className="font-mono">{order.id}</span></p>
                             <p>Date: <span className="font-medium">{new Date(order.date).toLocaleDateString()}</span></p>
-                            <p className="mt-2 font-semibold">GSTIN: <span className="font-mono">{COMPANY_GSTIN}</span></p>
+                            <p className="mt-2 font-semibold">GSTIN: <span className="font-mono">{companyDetails?.gstin || '[YOUR_GSTIN]'}</span></p>
                         </div>
                     </header>
 

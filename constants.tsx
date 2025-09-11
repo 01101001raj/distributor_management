@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserRole } from './types';
-import { LayoutDashboard, UserPlus, ShoppingCart, Wallet, ListOrdered, Boxes, Bell, Users, Sparkles, TrendingUp, Award, BrainCircuit, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, UserPlus, ShoppingCart, Wallet, ListOrdered, Boxes, Bell, Users, Sparkles, TrendingUp, Award, BrainCircuit, ClipboardList, Settings } from 'lucide-react';
 
 export const ROLES = [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE, UserRole.USER];
 
@@ -18,4 +18,5 @@ export const NAVIGATION_ITEMS = [
   { path: '/distributor-scorecard', label: 'Distributor Scorecard', icon: <ClipboardList size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE] },
   { path: '/ceo-insights', label: 'CEO Insights', icon: <BrainCircuit size={20} />, roles: [UserRole.SUPER_ADMIN] },
   { path: '/user-management', label: 'User Management', icon: <Users size={20} />, roles: [UserRole.SUPER_ADMIN] },
+  { path: '/settings', label: 'Settings', icon: <Settings size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE] },
 ];

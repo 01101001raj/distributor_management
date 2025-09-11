@@ -128,3 +128,12 @@ export interface InvoiceData {
     distributor: Distributor;
     items: EnrichedOrderItem[];
 }
+
+export interface CompanyDetails {
+  companyName: string;
+  addressLine1: string;
+  addressLine2: string;
+  email: string;
+  phone: string;
+  gstin: string;
+}

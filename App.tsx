@@ -18,6 +18,7 @@ import SalesPage from './components/SalesPage';
 import SpecialAssignmentsPage from './components/SpecialAssignmentsPage';
 import CEOInsightsPage from './components/CEOInsightsPage';
 import DistributorScorecardPage from './components/DistributorScorecardPage';
+import SettingsPage from './components/SettingsPage';
 
 function App() {
   return (
@@ -58,6 +59,7 @@ function ProtectedApp() {
         <Route path="distributor-scorecard" element={<DistributorScorecardPage />} />
         <Route path="ceo-insights" element={<CEOInsightsPage />} />
         <Route path="user-management" element={<UserManagement />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
       

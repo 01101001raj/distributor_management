@@ -3,7 +3,7 @@ import Card from './common/Card';
 import Button from './common/Button';
 import { api } from '../services/mockApiService';
 import { Order, Distributor, EnrichedOrderItem, OrderStatus } from '../types';
-import { ChevronDown, ChevronRight, Gift, Edit, CheckCircle, XCircle, Search, FileText } from 'lucide-react';
+import { ChevronDown, ChevronRight, Gift, Edit, CheckCircle, XCircle, Search, Download } from 'lucide-react';
 import EditOrderModal from './EditOrderModal';
 import { useAuth } from '../hooks/useAuth';
 import Input from './common/Input';
@@ -11,7 +11,6 @@ import Select from './common/Select';
 import { formatIndianCurrency } from '../utils/formatting';
 import { useSortableData } from '../hooks/useSortableData';
 import SortableTableHeader from './common/SortableTableHeader';
-import { Link } from 'react-router-dom';
 
 const OrderHistory: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -75,6 +74,12 @@ const OrderHistory: React.FC = () => {
     setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
   };
   
+  const handleDownloadInvoice = (orderId: string) => {
+    // This opens a new window which will auto-download and then close itself.
+    // The window is opened off-screen to be less intrusive.
+    window.open(`/#/invoice/${orderId}?download=true`, '_blank', 'width=1,height=1,left=9999,top=9999');
+  };
+
   const filteredOrders = useMemo(() => {
     return orders
       .map(order => ({
@@ -166,9 +171,9 @@ const OrderHistory: React.FC = () => {
                     <td className="p-3">{getStatusChip(order.status)}</td>
                     <td className="p-3 font-semibold">{formatIndianCurrency(order.totalAmount)}</td>
                     <td className="p-3">
-                        <Link to={`/invoice/${order.id}`} target="_blank" rel="noopener noreferrer">
-                            <Button size="sm" variant="secondary"><FileText size={14}/> View</Button>
-                        </Link>
+                        <Button size="sm" variant="secondary" onClick={() => handleDownloadInvoice(order.id)}>
+                            <Download size={14}/> Download
+                        </Button>
                     </td>
                     <td className="p-3">
                         {order.status === OrderStatus.PENDING && (
