@@ -79,8 +79,21 @@ const Invoice: React.FC = () => {
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
             
-            // Add the image to the PDF, stretching it to fit the exact A4 page dimensions.
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            const canvasAspectRatio = canvas.width / canvas.height;
+
+            // Calculate final image dimensions to fit within the A4 page while preserving aspect ratio
+            let finalWidth = pdfWidth;
+            let finalHeight = pdfWidth / canvasAspectRatio;
+
+            if (finalHeight > pdfHeight) {
+                finalHeight = pdfHeight;
+                finalWidth = pdfHeight * canvasAspectRatio;
+            }
+
+            // Center the image horizontally
+            const xOffset = (pdfWidth - finalWidth) / 2;
+            
+            pdf.addImage(imgData, 'PNG', xOffset, 0, finalWidth, finalHeight);
             pdf.save(`invoice-${orderId}.pdf`);
 
         } catch (error) {
