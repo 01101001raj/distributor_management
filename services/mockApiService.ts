@@ -341,6 +341,7 @@ export const api = {
   },
 
   getOrders: async (): Promise<Order[]> => simulateDelay([...orders]),
+  getAllOrderItems: async (): Promise<OrderItem[]> => simulateDelay([...orderItems]),
   getOrderItems: async (orderId: string): Promise<EnrichedOrderItem[]> => {
       const items = orderItems.filter(item => item.orderId === orderId);
       const enrichedItems = items.map(item => {
