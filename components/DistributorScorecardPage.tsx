@@ -6,7 +6,7 @@ import Button from './common/Button';
 import Input from './common/Input';
 import { ClipboardList, Award, Sparkles, AlertTriangle, Search } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { UserRole } from '../types';
+import { UserRole, OrderStatus } from '../types';
 import { Link } from 'react-router-dom';
 
 interface ScorecardEntry {
@@ -59,17 +59,55 @@ const DistributorScorecardPage: React.FC = () => {
         setScorecardData(null);
 
         try {
-            // 1. Fetch data
+            // 1. Fetch all necessary data
             const [distributors, orders, orderItems, schemes] = await Promise.all([
                 api.getDistributors(),
                 api.getOrders(),
                 api.getAllOrderItems(),
                 api.getSchemes(),
             ]);
-
-            const dataContext = JSON.stringify({ distributors, orders, orderItems, schemes });
             
-            // 2. Define response schema for AI
+            // 2. Pre-process and summarize data for the AI
+            const distributorPerformanceData = distributors.map(dist => {
+                const distOrders = orders.filter(o => o.distributorId === dist.id && o.status === OrderStatus.DELIVERED);
+                const distOrderIds = new Set(distOrders.map(o => o.id));
+
+                const totalSalesVolume = distOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+                const orderFrequency = distOrders.length;
+
+                let schemeParticipationOrders = 0;
+                const today = new Date().toISOString().split('T')[0];
+                const activeSchemes = schemes.filter(s => s.startDate <= today && s.endDate >= today);
+
+                distOrders.forEach(order => {
+                    const itemsInOrder = orderItems.filter(i => i.orderId === order.id && !i.isFreebie);
+                    let participatedInThisOrder = false;
+                    for (const scheme of activeSchemes) {
+                        if (scheme.isGlobal || scheme.distributorId === dist.id) {
+                            const boughtItem = itemsInOrder.find(i => i.skuId === scheme.buySkuId);
+                            if (boughtItem && boughtItem.quantity >= scheme.buyQuantity) {
+                                participatedInThisOrder = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (participatedInThisOrder) {
+                        schemeParticipationOrders++;
+                    }
+                });
+
+                return {
+                    distributorId: dist.id,
+                    distributorName: dist.name,
+                    totalSalesVolume: totalSalesVolume,
+                    orderFrequency: orderFrequency,
+                    schemeParticipationOrders: schemeParticipationOrders
+                };
+            });
+
+            const dataContext = JSON.stringify(distributorPerformanceData);
+            
+            // 3. Define response schema for AI
             const responseSchema = {
                 type: Type.ARRAY,
                 items: {
@@ -87,26 +125,24 @@ const DistributorScorecardPage: React.FC = () => {
                 },
             };
 
-            // 3. Construct the prompt
+            // 4. Construct a more focused prompt
             const fullPrompt = `
-                You are an expert business analyst for a distribution company. Your task is to analyze the provided JSON data about distributors, their orders, and promotional schemes.
-                For each distributor, you must calculate a performance score from 0 to 100.
-                Base the score on these factors:
-                1. Total Sales Volume: Higher total sales amount is the most important positive factor.
-                2. Order Frequency: A higher number of orders indicates consistent business.
-                3. Scheme Participation: Analyze how often a distributor's orders include products that are part of a promotional scheme ('buySkuId'). Higher participation is a positive signal.
+                You are an expert business analyst. Analyze the provided JSON data which contains pre-summarized performance metrics for each distributor.
+                For each distributor, calculate a performance score from 0 to 100 based on these factors:
+                1. 'totalSalesVolume': This is the most important positive factor. Higher is much better.
+                2. 'orderFrequency': A higher number of orders indicates consistent business. This is an important factor.
+                3. 'schemeParticipationOrders': A higher number of orders where a scheme was applied is a positive signal of engagement.
                 
-                For each distributor, provide the calculated score and a brief, 2-3 bullet point explanation for the score, mentioning the key factors.
+                Consider the relative performance of distributors against each other. The top performer in sales should get a very high score. A distributor with zero sales should get a very low score.
+                For each distributor, provide the calculated score and a brief, 2-3 bullet point explanation for the score.
 
-                The current date is ${new Date().toISOString().split('T')[0]}.
-
-                Here is the business data:
+                Here is the pre-summarized performance data:
                 ${dataContext}
 
-                Return your response as a JSON array that strictly adheres to the provided schema.
+                Return your response as a JSON array that strictly adheres to the provided schema. The output must be only the JSON array.
             `;
             
-            // 4. Call Gemini API
+            // 5. Call Gemini API
             const apiKey = process.env.API_KEY;
             if (!apiKey) throw new Error("API_KEY environment variable not set.");
             const ai = new GoogleGenAI({ apiKey });
@@ -120,7 +156,12 @@ const DistributorScorecardPage: React.FC = () => {
                 }
             });
 
-            const parsedResponse = JSON.parse(response.text);
+            const textResponse = response.text;
+            if (!textResponse) {
+                throw new Error("AI model returned an empty response. This could be due to a content filter or an issue with the prompt. Please try again.");
+            }
+            
+            const parsedResponse = JSON.parse(textResponse);
             const sortedData = parsedResponse.sort((a: ScorecardEntry, b: ScorecardEntry) => b.score - a.score);
             setScorecardData(sortedData);
 

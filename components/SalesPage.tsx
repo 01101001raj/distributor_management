@@ -59,6 +59,18 @@ const CustomStateTooltip = ({ active, payload, label }: any) => {
     return null;
 };
 
+const CustomSalesTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+        return (
+            <div className="bg-card p-3 border rounded-lg shadow-lg text-sm">
+                <p className="font-bold mb-1 text-text-primary">{label}</p>
+                <p className="text-primary">{`Sales: ${formatIndianCurrency(payload[0].value)}`}</p>
+            </div>
+        );
+    }
+    return null;
+};
+
 
 const SalesPage: React.FC = () => {
     const getInitialDateRange = () => {
@@ -82,7 +94,6 @@ const SalesPage: React.FC = () => {
     const [selectedArea, setSelectedArea] = useState<string>('all');
     const [selectedSchemeId, setSelectedSchemeId] = useState<string>('all');
     const [topProductsCount, setTopProductsCount] = useState<5 | 10>(5);
-    const [activeQuickFilter, setActiveQuickFilter] = useState<string>('last1Month');
     const [chartGranularity, setChartGranularity] = useState<ChartGranularity>('daily');
 
 
@@ -125,35 +136,6 @@ const SalesPage: React.FC = () => {
         setSelectedArea('all');
     };
     
-    const handleQuickFilterClick = (period: string) => {
-        setActiveQuickFilter(period);
-        const today = new Date();
-        let from = new Date();
-        let to = new Date();
-        today.setHours(23, 59, 59, 999);
-        from.setHours(0, 0, 0, 0);
-
-        switch (period) {
-            case 'last1Month':
-                from.setMonth(today.getMonth() - 1);
-                to = today;
-                break;
-            case 'last3Months':
-                from.setMonth(today.getMonth() - 3);
-                to = today;
-                break;
-            case 'last6Months':
-                from.setMonth(today.getMonth() - 6);
-                to = today;
-                break;
-            case 'last1Year':
-                from.setFullYear(today.getFullYear() - 1);
-                to = today;
-                break;
-        }
-        setDateRange({ from, to });
-    };
-
     const salesData = useMemo(() => {
         const { from, to } = dateRange;
         if (!from) {
@@ -486,10 +468,7 @@ const SalesPage: React.FC = () => {
                     <DateRangePicker 
                         label="Select Date Range"
                         value={dateRange}
-                        onChange={(newRange) => {
-                            setActiveQuickFilter('');
-                            setDateRange(newRange)
-                        }}
+                        onChange={setDateRange}
                     />
                      <Select label="Filter by State" value={selectedState} onChange={handleStateChange}>
                         <option value="all">All States</option>
@@ -517,13 +496,6 @@ const SalesPage: React.FC = () => {
                         <Download size={16} className="mr-2" />
                         Export Detailed CSV
                     </Button>
-                </div>
-                 <div className="col-span-1 md:col-span-2 lg:col-span-3 pt-4 flex flex-wrap items-center gap-2 border-t mt-4">
-                    <p className="text-sm font-medium text-text-secondary mr-2">Quick Ranges:</p>
-                    <Button onClick={() => handleQuickFilterClick('last1Month')} variant={activeQuickFilter === 'last1Month' ? 'primary' : 'secondary'} size="sm">Last 1 Month</Button>
-                    <Button onClick={() => handleQuickFilterClick('last3Months')} variant={activeQuickFilter === 'last3Months' ? 'primary' : 'secondary'} size="sm">Last 3 Months</Button>
-                    <Button onClick={() => handleQuickFilterClick('last6Months')} variant={activeQuickFilter === 'last6Months' ? 'primary' : 'secondary'} size="sm">Last 6 Months</Button>
-                    <Button onClick={() => handleQuickFilterClick('last1Year')} variant={activeQuickFilter === 'last1Year' ? 'primary' : 'secondary'} size="sm">Last 1 Year</Button>
                 </div>
             </Card>
 
@@ -557,7 +529,7 @@ const SalesPage: React.FC = () => {
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                     <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
                                     <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatIndianCurrencyShort(Number(value))} />
-                                    <Tooltip formatter={(value) => [formatIndianCurrency(Number(value)), 'Sales']} />
+                                    <Tooltip content={<CustomSalesTooltip />} cursor={{ fill: '#f9fafb' }} />
                                     <Line type="monotone" dataKey="sales" stroke="#3B82F6" strokeWidth={2} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6, fill: '#3B82F6' }} />
                                 </LineChart>
                             </ResponsiveContainer>

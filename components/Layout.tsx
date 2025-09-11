@@ -1,4 +1,5 @@
 
+
 import React, { ReactNode, useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -6,31 +7,9 @@ import { NAVIGATION_ITEMS } from '../constants';
 import Button from './common/Button';
 import { LogOut, Menu, X } from 'lucide-react';
 import NotificationDropdown from './common/NotificationDropdown';
+import { UserRole } from '../types';
 
-const Layout: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { userRole, logout, currentUser } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    setIsSidebarOpen(false);
-  }, [location.pathname]);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-  
-  if (!userRole || !currentUser) {
-      return null;
-  }
-  
-  if (location.pathname.startsWith('/invoice/')) {
-    return <>{children}</>;
-  }
-
-  const SidebarContent = () => (
+const SidebarContent: React.FC<{ userRole: UserRole, handleLogout: () => void }> = ({ userRole, handleLogout }) => (
     <>
       <div className="h-16 flex items-center justify-center border-b border-border">
         <h1 className="text-xl font-semibold text-primary">Distributor Portal</h1>
@@ -63,11 +42,34 @@ const Layout: React.FC<{ children: ReactNode }> = ({ children }) => {
     </>
   );
 
+const Layout: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { userRole, logout, currentUser } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+  
+  if (!userRole || !currentUser) {
+      return null;
+  }
+  
+  if (location.pathname.startsWith('/invoice/')) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex h-screen bg-background text-text-primary">
       {/* Mobile Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border flex flex-col transition-transform duration-300 ease-in-out md:hidden ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <SidebarContent />
+        <SidebarContent userRole={userRole} handleLogout={handleLogout} />
       </aside>
       
       {/* Overlay for Mobile */}
@@ -80,7 +82,7 @@ const Layout: React.FC<{ children: ReactNode }> = ({ children }) => {
 
       {/* Desktop Sidebar */}
       <aside className="w-64 bg-card border-r border-border flex-col hidden md:flex">
-        <SidebarContent />
+        <SidebarContent userRole={userRole} handleLogout={handleLogout} />
       </aside>
 
       {/* Main Content */}

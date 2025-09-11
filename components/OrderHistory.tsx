@@ -1,6 +1,4 @@
 
-
-
 import React, { useEffect, useState, useCallback } from 'react';
 import Card from './common/Card';
 import Button from './common/Button';
@@ -77,7 +75,7 @@ const OrderHistory: React.FC = () => {
   
   const filteredOrders = orders.filter(order => {
       const distributorName = getDistributorName(order.distributorId).toLowerCase();
-      const search = searchTerm.toLowerCase();
+      const search = searchTerm.toLowerCase().trim();
       const matchesSearch = order.id.toLowerCase().includes(search) || distributorName.includes(search);
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
       return matchesSearch && matchesStatus;
