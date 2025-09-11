@@ -4,6 +4,8 @@ import { Distributor, SKU, SpecialPrice, Scheme } from '../types';
 import Card from './common/Card';
 import Input from './common/Input';
 import { Search, Tag, Sparkles } from 'lucide-react';
+import { useSortableData } from '../hooks/useSortableData';
+import SortableTableHeader from './common/SortableTableHeader';
 
 const SpecialAssignmentsPage = () => {
     const [activeTab, setActiveTab] = useState('pricing');
@@ -41,7 +43,7 @@ const SpecialAssignmentsPage = () => {
         return distributors.filter(d => 
             d.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
             d.id.toLowerCase().includes(searchTerm.toLowerCase())
-        ).sort((a,b) => a.name.localeCompare(b.name));
+        );
     }, [distributors, searchTerm]);
 
     const priceMap = useMemo(() => {
@@ -66,6 +68,22 @@ const SpecialAssignmentsPage = () => {
         return map;
     }, [distributorSchemes]);
 
+    const pricingTableData = useMemo(() => {
+        return filteredDistributors.map(dist => {
+            const row: any = {
+                id: dist.id,
+                name: dist.name,
+            };
+            skus.forEach(sku => {
+                const specialPrice = priceMap.get(`${dist.id}-${sku.id}`);
+                row[sku.id] = specialPrice ? specialPrice.price : sku.price;
+            });
+            return row;
+        });
+    }, [filteredDistributors, skus, priceMap]);
+    
+    const { items: sortedPricingData, requestSort: requestPricingSort, sortConfig: pricingSortConfig } = useSortableData(pricingTableData, { key: 'name', direction: 'ascending' });
+
     if (loading) {
         return <div className="text-center p-8">Loading special assignments...</div>;
     }
@@ -81,17 +99,17 @@ const SpecialAssignmentsPage = () => {
                             placeholder="Search distributors..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            icon={<Search size={16} className="text-text-secondary" />}
+                            icon={<Search size={16} />}
                         />
                     </div>
                 </div>
 
                 <div className="border-b border-border mt-4">
                     <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-                        <button onClick={() => setActiveTab('pricing')} className={`py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'pricing' ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-primary hover:border-gray-300'}`}>
+                        <button onClick={() => setActiveTab('pricing')} className={`py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'pricing' ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-primary hover:border-slate-300'}`}>
                             Special Pricing
                         </button>
-                        <button onClick={() => setActiveTab('schemes')} className={`py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'schemes' ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-primary hover:border-gray-300'}`}>
+                        <button onClick={() => setActiveTab('schemes')} className={`py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'schemes' ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-primary hover:border-slate-300'}`}>
                             Special Schemes
                         </button>
                     </nav>
@@ -105,33 +123,36 @@ const SpecialAssignmentsPage = () => {
                         This table shows the final price for each distributor and product. Prices highlighted in <span className="p-1 rounded bg-yellow-100 text-yellow-800">yellow</span> are active special prices. All other prices are the default.
                     </p>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left min-w-[1200px]">
-                            <thead className="bg-background sticky top-0">
+                        <table className="w-full text-left min-w-[1200px] text-sm">
+                            <thead className="bg-slate-50 sticky top-0">
                                 <tr>
-                                    <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider whitespace-nowrap">Distributor</th>
+                                    <SortableTableHeader label="Distributor" sortKey="name" requestSort={requestPricingSort as any} sortConfig={pricingSortConfig} className="whitespace-nowrap" />
                                     {skus.map(sku => (
-                                        <th key={sku.id} className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center whitespace-nowrap">{sku.name}</th>
+                                        <SortableTableHeader key={sku.id} label={sku.name} sortKey={sku.id as any} requestSort={requestPricingSort} sortConfig={pricingSortConfig} className="text-center whitespace-nowrap" />
                                     ))}
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredDistributors.map(dist => (
-                                    <tr key={dist.id} className="border-b border-border last:border-b-0 hover:bg-background">
-                                        <td className="p-3 font-medium text-text-primary whitespace-nowrap">{dist.name}</td>
-                                        {skus.map(sku => {
-                                            const specialPrice = priceMap.get(`${dist.id}-${sku.id}`);
-                                            const isSpecial = !!specialPrice;
-                                            return (
-                                                <td key={sku.id} className={`p-3 text-center font-semibold whitespace-nowrap ${isSpecial ? 'bg-yellow-100 text-yellow-800' : ''}`} title={isSpecial ? `Special price valid from ${specialPrice.startDate} to ${specialPrice.endDate}` : `Default price`}>
-                                                    ₹{isSpecial ? specialPrice.price.toLocaleString() : sku.price.toLocaleString()}
-                                                </td>
-                                            )
-                                        })}
-                                    </tr>
-                                ))}
+                                {sortedPricingData.map((distData: any) => {
+                                    const dist = distributors.find(d => d.id === distData.id)!;
+                                    return (
+                                        <tr key={dist.id} className="border-b border-border last:border-b-0 hover:bg-slate-50">
+                                            <td className="p-3 font-medium text-text-primary whitespace-nowrap">{dist.name}</td>
+                                            {skus.map(sku => {
+                                                const specialPrice = priceMap.get(`${dist.id}-${sku.id}`);
+                                                const isSpecial = !!specialPrice;
+                                                return (
+                                                    <td key={sku.id} className={`p-3 text-center font-semibold whitespace-nowrap ${isSpecial ? 'bg-yellow-100 text-yellow-800' : ''}`} title={isSpecial ? `Special price valid from ${specialPrice.startDate} to ${specialPrice.endDate}` : `Default price`}>
+                                                        ₹{distData[sku.id].toLocaleString()}
+                                                    </td>
+                                                )
+                                            })}
+                                        </tr>
+                                    )
+                                })}
                             </tbody>
                         </table>
-                        {filteredDistributors.length === 0 && (
+                        {sortedPricingData.length === 0 && (
                             <div className="text-center p-6 text-text-secondary">
                                 <p>No distributors found for "{searchTerm}".</p>
                             </div>

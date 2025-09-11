@@ -5,6 +5,7 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import Card from './common/Card';
 import Button from './common/Button';
 import Input from './common/Input';
+import { Briefcase } from 'lucide-react';
 
 interface FormInputs {
   username: string;
@@ -38,34 +39,40 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="max-w-md w-full">
+    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+      <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">Distributor Portal</h1>
-          <p className="text-text-secondary mt-2">Please sign in to continue</p>
+            <Briefcase size={40} className="mx-auto text-primary" />
+            <h1 className="text-3xl font-bold text-text-primary mt-4">Distributor Portal</h1>
         </div>
-        <form onSubmit={handleSubmit(handleLogin)} className="space-y-6">
-          <Input
-            id="username"
-            label="Username"
-            {...register('username', { required: 'Username is required' })}
-            error={errors.username?.message}
-            autoComplete="username"
-          />
-          <Input
-            id="password"
-            label="Password"
-            type="password"
-            {...register('password', { required: 'Password is required' })}
-            error={errors.password?.message}
-            autoComplete="current-password"
-          />
-          {loginError && <p className="text-sm text-red-600 text-center">{loginError}</p>}
-          <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={!isValid}>
-            Login
-          </Button>
-        </form>
-      </Card>
+        <Card>
+            <h2 className="text-lg font-semibold text-center text-text-primary mb-1">Welcome back</h2>
+            <p className="text-sm text-text-secondary text-center mb-6">Please sign in to continue</p>
+            <form onSubmit={handleSubmit(handleLogin)} className="space-y-4">
+            <Input
+                id="username"
+                label="Username"
+                {...register('username', { required: 'Username is required' })}
+                error={errors.username?.message}
+                autoComplete="username"
+            />
+            <Input
+                id="password"
+                label="Password"
+                type="password"                
+                {...register('password', { required: 'Password is required' })}
+                error={errors.password?.message}
+                autoComplete="current-password"
+            />
+            {loginError && <p className="text-sm text-red-600 text-center pt-2">{loginError}</p>}
+            <div className="pt-4">
+                <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={!isValid}>
+                    Login
+                </Button>
+            </div>
+            </form>
+        </Card>
+      </div>
     </div>
   );
 };

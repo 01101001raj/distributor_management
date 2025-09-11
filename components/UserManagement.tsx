@@ -1,6 +1,3 @@
-
-
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../services/mockApiService';
@@ -12,18 +9,21 @@ import Input from './common/Input';
 import Select from './common/Select';
 import { PlusCircle, Edit, Save, X, Trash2 } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
+import { useSortableData } from '../hooks/useSortableData';
+import SortableTableHeader from './common/SortableTableHeader';
 
 const UserManagement: React.FC = () => {
     const { currentUser } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
     const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
     const { register, handleSubmit, formState: { errors, isValid }, reset } = useForm<Partial<User>>({
         mode: 'onBlur',
     });
+
+    const { items: sortedUsers, requestSort, sortConfig } = useSortableData(users, { key: 'username', direction: 'ascending' });
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -106,7 +106,7 @@ const UserManagement: React.FC = () => {
     }
     
     const renderEditRow = () => (
-        <tr className="bg-blue-50">
+        <tr className="bg-primary/5">
             <td className="p-2">
                 <Input
                     {...register('username', { required: 'Username is required' })}
@@ -138,26 +138,26 @@ const UserManagement: React.FC = () => {
         <Card>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h2 className="text-2xl font-bold">User Management</h2>
-                <Button onClick={handleAddNew} disabled={!!editingUserId || loading} className="w-full sm:w-auto"><PlusCircle size={16} className="mr-2"/> Add New User</Button>
+                <Button onClick={handleAddNew} disabled={!!editingUserId || loading} className="w-full sm:w-auto"><PlusCircle size={14}/> Add New User</Button>
             </div>
-            {error && <div className="p-3 bg-red-100 text-red-800 rounded-lg mb-4">{error}</div>}
+            {error && <div className="p-3 bg-red-100 text-red-800 rounded-lg mb-4 text-sm">{error}</div>}
             <div className="overflow-x-auto">
-                <table className="w-full text-left min-w-[700px]">
-                    <thead className="bg-background">
-                        <tr className="border-b border-border">
-                            <th className="p-3 w-1/4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Username</th>
-                            <th className="p-3 w-1/4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Role</th>
-                            <th className="p-3 w-1/4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Password</th>
-                            <th className="p-3 w-1/4 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Actions</th>
+                <table className="w-full text-left min-w-[700px] text-sm">
+                    <thead className="bg-slate-50">
+                        <tr>
+                            <SortableTableHeader label="Username" sortKey="username" requestSort={requestSort} sortConfig={sortConfig} className="w-1/4" />
+                            <SortableTableHeader label="Role" sortKey="role" requestSort={requestSort} sortConfig={sortConfig} className="w-1/4" />
+                            <th className="p-3 w-1/4 font-semibold text-text-secondary">Password</th>
+                            <th className="p-3 w-1/4 font-semibold text-text-secondary text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {editingUserId === 'new' && renderEditRow()}
-                        {users.map(user => (
+                        {sortedUsers.map(user => (
                             editingUserId === user.id ? (
                                 renderEditRow()
                             ) : (
-                                <tr key={user.id} className="border-b border-border hover:bg-background">
+                                <tr key={user.id} className="border-b border-border hover:bg-slate-50">
                                     <td className="p-3 font-medium">{user.username}</td>
                                     <td className="p-3">{user.role}</td>
                                     <td className="p-3 text-xs italic text-text-secondary">Hidden</td>

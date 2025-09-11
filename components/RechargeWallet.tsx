@@ -81,10 +81,10 @@ const RechargeWallet: React.FC = () => {
         </Select>
         
         {selectedDistributor && (
-            <div className="bg-blue-50 p-4 rounded-lg space-y-2">
+            <div className="bg-primary/10 p-4 rounded-lg space-y-2">
                 <div className="flex justify-between items-center">
                     <span className="font-medium text-text-secondary">Current Wallet Balance:</span>
-                    <span className="font-bold text-black text-lg">{formatIndianCurrency(selectedDistributor.walletBalance)}</span>
+                    <span className="font-bold text-text-primary text-lg">{formatIndianCurrency(selectedDistributor.walletBalance)}</span>
                 </div>
             </div>
         )}
@@ -119,7 +119,7 @@ const RechargeWallet: React.FC = () => {
         </div>
 
         {statusMessage && (
-            <div className={`flex items-center p-3 rounded-md mt-4 ${statusMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            <div className={`flex items-center p-3 rounded-md mt-4 text-sm ${statusMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                 {statusMessage.type === 'success' ? <CheckCircle className="mr-2" /> : <XCircle className="mr-2" />}
                 {statusMessage.text}
             </div>

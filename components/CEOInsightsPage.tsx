@@ -138,11 +138,11 @@ const CEOInsightsPage: React.FC = () => {
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
-            <Card className="text-center">
+            <div className="text-center">
                 <BrainCircuit size={48} className="mx-auto text-primary" />
                 <h1 className="text-3xl font-bold mt-4 text-text-primary">CEO Insights</h1>
                 <p className="mt-2 text-text-secondary">Ask questions about your business data and get AI-powered answers.</p>
-            </Card>
+            </div>
 
             <Card>
                 <div className="flex flex-col sm:flex-row gap-2">
@@ -151,11 +151,11 @@ const CEOInsightsPage: React.FC = () => {
                         value={userInput}
                         onChange={(e) => setUserInput(e.target.value)}
                         placeholder="e.g., 'What are my top selling products this quarter?'"
-                        className="w-full px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                        className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 transition bg-white text-sm text-text-primary border-border focus:border-primary"
                         onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
                     />
                     <Button onClick={() => handleGenerate()} disabled={loading || !userInput} className="w-full sm:w-auto">
-                        {loading ? 'Analyzing...' : <><Send size={16} className="mr-2"/>Generate Insights</>}
+                        {loading ? 'Analyzing...' : <><Send size={16}/>Generate Insights</>}
                     </Button>
                 </div>
                 <div className="mt-4">
@@ -166,7 +166,7 @@ const CEOInsightsPage: React.FC = () => {
                                 key={prompt}
                                 onClick={() => handleGenerate(prompt)}
                                 disabled={loading}
-                                className="text-xs bg-background px-2 py-1 rounded-md border border-border hover:bg-blue-50 hover:border-primary transition-colors disabled:opacity-50"
+                                className="text-xs bg-background px-2 py-1 rounded-md border border-border hover:bg-primary/10 hover:border-primary transition-colors disabled:opacity-50"
                             >
                                 {prompt}
                             </button>
@@ -188,16 +188,16 @@ const CEOInsightsPage: React.FC = () => {
                         </div>
                     )}
                     {error && (
-                         <div className="p-4 bg-red-50 text-red-700 rounded-lg flex items-center">
-                            <AlertTriangle size={20} className="mr-3"/>
+                         <div className="p-4 bg-red-50 text-red-700 rounded-lg flex items-start text-sm">
+                            <AlertTriangle size={20} className="mr-3 mt-0.5 flex-shrink-0"/>
                             <div>
                                 <h3 className="font-semibold">Analysis Failed</h3>
-                                <p className="text-sm">{error}</p>
+                                <p>{error}</p>
                             </div>
                         </div>
                     )}
                     {aiResponse && (
-                        <div className="p-4 bg-background rounded-lg border border-border">
+                        <div className="p-4 bg-background rounded-lg border border-border text-sm">
                             <AIResponseRenderer text={aiResponse} />
                         </div>
                     )}

@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -17,13 +16,13 @@ const Input: React.FC<InputProps> = ({ label, id, error, icon, ...props }) => {
       )}
       <div className="relative">
         {icon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-secondary">
             {icon}
           </div>
         )}
         <input
           id={id}
-          className={`w-full py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-1 transition ${icon ? 'pl-10' : 'px-3'} ${error ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary focus:border-primary'}`}
+          className={`w-full py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 transition bg-white text-sm text-text-primary ${icon ? 'pl-10' : 'px-3'} ${error ? 'border-red-500 focus:ring-red-500/50' : 'border-border focus:border-primary'}`}
           {...props}
         />
       </div>

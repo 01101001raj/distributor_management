@@ -193,14 +193,14 @@ const DistributorScorecardPage: React.FC = () => {
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
-             <Card className="text-center">
+             <div className="text-center">
                 <ClipboardList size={48} className="mx-auto text-primary" />
                 <h1 className="text-3xl font-bold mt-4 text-text-primary">Distributor Performance Scorecard</h1>
                 <p className="mt-2 text-text-secondary">Use AI to analyze and rank distributors based on sales, order frequency, and scheme participation.</p>
                 <Button onClick={handleGenerate} disabled={loading} className="mt-6">
                     {loading ? 'Analyzing...' : 'Generate Scorecard'}
                 </Button>
-            </Card>
+            </div>
 
             {loading && (
                  <div className="flex flex-col items-center justify-center p-8 space-y-4">
@@ -210,11 +210,11 @@ const DistributorScorecardPage: React.FC = () => {
             )}
 
             {error && (
-                <div className="p-4 bg-red-50 text-red-700 rounded-lg flex items-center">
-                    <AlertTriangle size={20} className="mr-3"/>
+                <div className="p-4 bg-red-50 text-red-700 rounded-lg flex items-start text-sm">
+                    <AlertTriangle size={20} className="mr-3 mt-0.5 flex-shrink-0"/>
                     <div>
                         <h3 className="font-semibold">Analysis Failed</h3>
-                        <p className="text-sm">{error}</p>
+                        <p>{error}</p>
                     </div>
                 </div>
             )}
@@ -229,7 +229,7 @@ const DistributorScorecardPage: React.FC = () => {
                                 placeholder="Search distributors..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                icon={<Search size={16} className="text-text-secondary" />}
+                                icon={<Search size={16} />}
                             />
                         </div>
                     </div>

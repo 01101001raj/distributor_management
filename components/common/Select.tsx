@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
@@ -17,7 +16,7 @@ const Select: React.FC<SelectProps> = ({ label, id, error, children, ...props })
       )}
       <select
         id={id}
-        className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-1 transition bg-white ${error ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary focus:border-primary'}`}
+        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 transition bg-white text-sm text-text-primary ${error ? 'border-red-500 focus:ring-red-500/50' : 'border-border focus:border-primary'}`}
         {...props}
       >
         {children}

@@ -32,11 +32,11 @@ const INITIAL_USERS: User[] = [
 ];
 
 const INITIAL_SKUS: SKU[] = [
-    { id: 'sku-1', name: 'Normal 2L', price: 90 },
-    { id: 'sku-2', name: 'Normal 1L', price: 50 },
-    { id: 'sku-3', name: 'Normal 500ml', price: 25 },
-    { id: 'sku-4', name: 'Normal 250ml', price: 15 },
-    { id: 'sku-5', name: 'Premium 1L', price: 80 },
+    { id: 'sku-1', name: 'Normal 2L', price: 90, hsnCode: '2201' },
+    { id: 'sku-2', name: 'Normal 1L', price: 50, hsnCode: '2201' },
+    { id: 'sku-3', name: 'Normal 500ml', price: 25, hsnCode: '2201' },
+    { id: 'sku-4', name: 'Normal 250ml', price: 15, hsnCode: '2201' },
+    { id: 'sku-5', name: 'Premium 1L', price: 80, hsnCode: '2202' },
 ];
 
 const getFutureDate = (days: number) => new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
@@ -448,7 +448,11 @@ class ApiService {
     const items = store.orderItems.filter(i => i.orderId === orderId);
     const enriched = items.map(item => {
         const sku = store.skus.find(s => s.id === item.skuId);
-        return { ...item, skuName: sku?.name || 'Unknown SKU' };
+        return { 
+            ...item, 
+            skuName: sku?.name || 'Unknown SKU',
+            hsnCode: sku?.hsnCode || 'N/A',
+        };
     });
     return simulateNetwork(enriched);
   }

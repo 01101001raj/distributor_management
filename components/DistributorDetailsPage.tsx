@@ -11,6 +11,8 @@ import { useAuth } from '../hooks/useAuth';
 import EditOrderModal from './EditOrderModal';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { formatIndianCurrency } from '../utils/formatting';
+import { useSortableData } from '../hooks/useSortableData';
+import SortableTableHeader from './common/SortableTableHeader';
 
 const DistributorDetailsPage: React.FC = () => {
   const { distributorId } = useParams<{ distributorId: string }>();
@@ -52,7 +54,7 @@ const DistributorDetailsPage: React.FC = () => {
           setError("Distributor not found.");
         } else {
           setDistributor(distributorData);
-          setOrders(ordersData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+          setOrders(ordersData);
           setTransactions(transactionsData); 
           setSpecialPrices(specialPricesData);
           setSchemes(schemesData);
@@ -70,6 +72,9 @@ const DistributorDetailsPage: React.FC = () => {
     fetchData();
   }, [fetchData]);
   
+  const { items: sortedTransactions, requestSort: requestTxSort, sortConfig: txSortConfig } = useSortableData(transactions, { key: 'date', direction: 'descending' });
+  const { items: sortedOrders, requestSort: requestOrderSort, sortConfig: orderSortConfig } = useSortableData(orders, { key: 'date', direction: 'descending' });
+
   const handleMarkDelivered = async (orderId: string) => {
       if (window.confirm("Mark this order as delivered? It cannot be edited further.")) {
           if (!currentUser) {
@@ -99,7 +104,7 @@ const DistributorDetailsPage: React.FC = () => {
   };
   
   const getStatusChip = (status: OrderStatus) => {
-      const baseClasses = "px-2.5 py-1 text-xs font-medium rounded-full inline-block";
+      const baseClasses = "px-2.5 py-1 text-xs font-semibold rounded-full inline-block";
       if (status === OrderStatus.DELIVERED) {
           return <span className={`${baseClasses} bg-green-100 text-green-700`}>{status}</span>;
       }
@@ -115,24 +120,24 @@ const DistributorDetailsPage: React.FC = () => {
   return (
     <div className="space-y-6">
        {statusMessage && (
-          <div className={`p-3 rounded-lg flex items-center ${statusMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          <div className={`p-3 rounded-lg flex items-center text-sm ${statusMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
               {statusMessage.type === 'success' ? <CheckCircle className="mr-2" /> : <XCircle className="mr-2" />}
               {statusMessage.text}
           </div>
       )}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-4">
         <Button onClick={() => navigate("/dashboard")} variant="secondary" size="sm">
-          <ArrowLeft size={16} className="mr-2" />
+          <ArrowLeft size={16}/>
           Back to Dashboard
         </Button>
         {canEdit && (
             <div className="flex flex-col sm:flex-row items-stretch gap-2">
                 <Button onClick={() => navigate('/recharge-wallet', { state: { distributorId: distributor.id } })} variant="secondary">
-                    <Wallet size={16} className="mr-2" />
+                    <Wallet size={16}/>
                     Recharge Wallet
                 </Button>
                 <Button onClick={() => navigate('/place-order', { state: { distributorId: distributor.id } })}>
-                    <ShoppingCart size={16} className="mr-2" />
+                    <ShoppingCart size={16}/>
                     Place Order
                 </Button>
             </div>
@@ -152,7 +157,7 @@ const DistributorDetailsPage: React.FC = () => {
                         </span>
                     )}
                     {distributor.hasSpecialSchemes && (
-                        <span className="flex items-center gap-1 bg-blue-100 text-primary text-xs font-medium px-2.5 py-0.5 rounded-full">
+                        <span className="flex items-center gap-1 bg-primary/10 text-primary text-xs font-medium px-2.5 py-0.5 rounded-full">
                             <Sparkles size={12} /> Special Schemes
                         </span>
                     )}
@@ -185,24 +190,24 @@ const DistributorDetailsPage: React.FC = () => {
       </div>
       
       {distributor.hasSpecialPricing && <SpecialPricesManager distributorId={distributor.id} initialPrices={specialPrices} skus={skus} onUpdate={fetchData} canEdit={canEdit} />}
-      {distributor.hasSpecialSchemes && <SpecialSchemesManager distributorId={distributor.id} initialSchemes={schemes} skus={skus} onUpdate={fetchData} canEdit={canEdit} />}
+      {distributor.hasSpecialSchemes && <SpecialSchemesManager distributorId={distributor.id} initialSchemes={schemes} skus={skus} onUpdate={fetchData} canEdit={canEdit} userRole={userRole} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <h3 className="flex items-center text-lg font-semibold mb-4 text-text-primary"><Wallet size={20} className="mr-3" />Wallet Transactions</h3>
           <div className="overflow-y-auto max-h-96 overflow-x-auto">
-            {transactions.length > 0 ? (
+            {sortedTransactions.length > 0 ? (
                 <table className="w-full text-left min-w-[400px]">
-                  <thead className="bg-background text-xs uppercase sticky top-0">
-                    <tr className="border-b border-border">
-                      <th className="p-2 font-semibold text-text-secondary">Date</th>
-                      <th className="p-2 font-semibold text-text-secondary">Type</th>
-                      <th className="p-2 font-semibold text-text-secondary text-right">Amount</th>
-                      <th className="p-2 font-semibold text-text-secondary text-right">Balance</th>
+                  <thead className="bg-slate-50 text-xs uppercase sticky top-0">
+                    <tr>
+                      <SortableTableHeader label="Date" sortKey="date" requestSort={requestTxSort} sortConfig={txSortConfig} />
+                      <SortableTableHeader label="Type" sortKey="type" requestSort={requestTxSort} sortConfig={txSortConfig} />
+                      <SortableTableHeader label="Amount" sortKey="amount" requestSort={requestTxSort} sortConfig={txSortConfig} className="text-right" />
+                      <SortableTableHeader label="Balance" sortKey="balanceAfter" requestSort={requestTxSort} sortConfig={txSortConfig} className="text-right" />
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.map(t => (
+                    {sortedTransactions.map(t => (
                       <tr key={t.id} className="border-b border-border last:border-0 text-sm">
                         <td className="p-2 text-xs text-text-secondary whitespace-nowrap">{new Date(t.date).toLocaleString()}</td>
                         <td className="p-2 capitalize font-medium">{t.type.replace('_', ' ').toLowerCase()}</td>
@@ -223,43 +228,43 @@ const DistributorDetailsPage: React.FC = () => {
         <Card>
           <h3 className="flex items-center text-lg font-semibold mb-4 text-text-primary"><ShoppingCart size={20} className="mr-3" />Order History</h3>
            <div className="overflow-y-auto max-h-96 overflow-x-auto">
-            {orders.length > 0 ? (
-                <table className="w-full text-left min-w-[600px]">
-                  <thead className="border-b border-border bg-background sticky top-0">
+            {sortedOrders.length > 0 ? (
+                <table className="w-full text-left min-w-[600px] text-sm">
+                  <thead className="border-b border-border bg-slate-50 sticky top-0">
                       <tr>
                           <th className="p-2 w-10"></th>
-                          <th className="p-2 text-xs font-semibold text-text-secondary uppercase tracking-wider">Order ID</th>
-                          <th className="p-2 text-xs font-semibold text-text-secondary uppercase tracking-wider">Date</th>
-                          <th className="p-2 text-xs font-semibold text-text-secondary uppercase tracking-wider">Status</th>
-                          <th className="p-2 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Amount</th>
+                          <SortableTableHeader label="Order ID" sortKey="id" requestSort={requestOrderSort} sortConfig={orderSortConfig} />
+                          <SortableTableHeader label="Date" sortKey="date" requestSort={requestOrderSort} sortConfig={orderSortConfig} />
+                          <SortableTableHeader label="Status" sortKey="status" requestSort={requestOrderSort} sortConfig={orderSortConfig} />
+                          <SortableTableHeader label="Amount" sortKey="totalAmount" requestSort={requestOrderSort} sortConfig={orderSortConfig} className="text-right" />
                       </tr>
                   </thead>
                   <tbody>
-                      {orders.map(o => (
+                      {sortedOrders.map(o => (
                           <React.Fragment key={o.id}>
-                              <tr className="border-b border-border last:border-0 hover:bg-background">
+                              <tr className="border-b border-border last:border-0 hover:bg-slate-50">
                                   <td className="p-2 text-center">
-                                      <button onClick={() => toggleExpand(o.id)} className="hover:bg-gray-200 rounded-full p-1 disabled:opacity-50" disabled={!!updatingOrderId}>
+                                      <button onClick={() => toggleExpand(o.id)} className="hover:bg-slate-100 rounded-full p-1 disabled:opacity-50" disabled={!!updatingOrderId}>
                                         {expandedOrderId === o.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                                       </button>
                                   </td>
                                   <td className="p-2 font-mono text-xs cursor-pointer" onClick={() => toggleExpand(o.id)}>{o.id}</td>
-                                  <td className="p-2 text-sm cursor-pointer" onClick={() => toggleExpand(o.id)}>{new Date(o.date).toLocaleDateString()}</td>
+                                  <td className="p-2 cursor-pointer" onClick={() => toggleExpand(o.id)}>{new Date(o.date).toLocaleDateString()}</td>
                                   <td className="p-2 cursor-pointer" onClick={() => toggleExpand(o.id)}>{getStatusChip(o.status)}</td>
                                   <td className="p-2 font-semibold text-right cursor-pointer" onClick={() => toggleExpand(o.id)}>{formatIndianCurrency(o.totalAmount)}</td>
                               </tr>
                                {o.status === OrderStatus.PENDING && (
                                   <tr className="border-b border-border last:border-0">
-                                      <td colSpan={5} className="py-2 px-4 text-right bg-background">
+                                      <td colSpan={5} className="py-2 px-4 text-right bg-slate-50">
                                           <div className="flex justify-end gap-2">
-                                              <Button size="sm" variant="secondary" onClick={() => setEditingOrder(o)} disabled={!!updatingOrderId}><Edit size={14} className="mr-1"/> Edit</Button>
-                                              <Button size="sm" variant="primary" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleMarkDelivered(o.id)} isLoading={updatingOrderId === o.id} disabled={!!updatingOrderId}><CheckCircle size={14} className="mr-1"/> Deliver</Button>
+                                              <Button size="sm" variant="secondary" onClick={() => setEditingOrder(o)} disabled={!!updatingOrderId}><Edit size={14}/> Edit</Button>
+                                              <Button size="sm" variant="primary" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleMarkDelivered(o.id)} isLoading={updatingOrderId === o.id} disabled={!!updatingOrderId}><CheckCircle size={14}/> Deliver</Button>
                                           </div>
                                       </td>
                                   </tr>
                                )}
                               {expandedOrderId === o.id && (
-                                  <tr className="bg-blue-50/50">
+                                  <tr className="bg-primary/5">
                                       <td colSpan={5} className="p-4">
                                           <OrderDetails orderId={o.id} />
                                       </td>
@@ -304,13 +309,13 @@ const OrderDetails: React.FC<{ orderId: string }> = ({ orderId }) => {
         <div className="bg-card p-4 rounded-lg border border-border">
             <h4 className="font-bold mb-2 text-text-primary">Order Items</h4>
             <div className="overflow-x-auto">
-                <table className="w-full bg-white rounded-md min-w-[400px]">
+                <table className="w-full bg-white rounded-md min-w-[400px] text-sm">
                     <thead>
                         <tr className="text-left border-b border-border">
-                            <th className="p-2 text-sm text-text-secondary font-medium">Product</th>
-                            <th className="p-2 text-sm text-text-secondary font-medium text-center">Quantity</th>
-                            <th className="p-2 text-sm text-text-secondary font-medium text-right">Unit Price</th>
-                            <th className="p-2 text-sm text-text-secondary font-medium text-right">Subtotal</th>
+                            <th className="p-2 font-semibold text-text-secondary">Product</th>
+                            <th className="p-2 font-semibold text-text-secondary text-center">Quantity</th>
+                            <th className="p-2 font-semibold text-text-secondary text-right">Unit Price</th>
+                            <th className="p-2 font-semibold text-text-secondary text-right">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -338,10 +343,11 @@ const SpecialPricesManager: React.FC<{ distributorId: string; initialPrices: Spe
     const validateRow = (skuId: string, currentData: Partial<Omit<SpecialPrice, 'id' | 'distributorId'>>) => {
         const newErrors: Record<string, string> = {};
         const { price, startDate, endDate } = currentData;
-        const hasPrice = price !== undefined && String(price).length > 0;
+        const hasPrice = price !== undefined && String(price).length > 0 && price > 0;
         const hasStartDate = startDate && startDate.length > 0;
         const hasEndDate = endDate && endDate.length > 0;
 
+        // A row is valid if it's completely empty OR completely full and logically correct.
         if ([hasPrice, hasStartDate, hasEndDate].some(Boolean) && ![hasPrice, hasStartDate, hasEndDate].every(Boolean)) {
             if (!hasPrice) newErrors.price = 'Required';
             if (!hasStartDate) newErrors.startDate = 'Required';
@@ -354,281 +360,273 @@ const SpecialPricesManager: React.FC<{ distributorId: string; initialPrices: Spe
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleEditClick = () => {
-        const priceMap = initialPrices.reduce((acc, price) => {
-            acc[price.skuId] = { price: price.price, startDate: price.startDate, endDate: price.endDate, skuId: price.skuId };
-            return acc;
-        }, {} as Record<string, Partial<Omit<SpecialPrice, 'id' | 'distributorId'>>>);
-        setEditedPrices(priceMap);
-        setIsEditing(true);
-    };
-
-    const handleCancel = () => {
-        setIsEditing(false);
-        setEditedPrices({});
-        setErrors({});
+    const handlePriceChange = (skuId: string, field: keyof Omit<SpecialPrice, 'id'|'distributorId'|'skuId'>, value: string | number) => {
+        const updatedPrice = { ...editedPrices[skuId], [field]: value };
+        validateRow(skuId, updatedPrice);
+        setEditedPrices(prev => ({ ...prev, [skuId]: updatedPrice }));
     };
 
     const handleSave = async () => {
-        let isFormValid = true;
-        skus.forEach(sku => {
-            const data = editedPrices[sku.id] || {};
-            if (Object.values(data).some(v => v !== undefined && v !== '')) {
-                if (!validateRow(sku.id, data)) {
-                    isFormValid = false;
-                }
+        let allValid = true;
+        for (const skuId of Object.keys(editedPrices)) {
+            if (!validateRow(skuId, editedPrices[skuId])) {
+                allValid = false;
             }
-        });
-        
-        if (!isFormValid) {
+        }
+
+        if (!allValid) {
+            alert("Please fix the errors before saving.");
             return;
         }
-        
-        const promises: Promise<any>[] = [];
-        const initialPriceMap = new Map(initialPrices.map(p => [p.skuId, p]));
 
-        for (const sku of skus) {
-            const edited = editedPrices[sku.id];
-            if (!edited) continue;
+        try {
+            for (const skuId of skus.map(s => s.id)) {
+                const originalPrice = initialPrices.find(p => p.skuId === skuId);
+                const editedPrice = editedPrices[skuId];
 
-            const hasData = edited.price && edited.startDate && edited.endDate;
-
-            if (hasData) {
-                 const initial = initialPriceMap.get(sku.id);
-                 if (initial) { // It's an update
-                     promises.push(api.updateSpecialPrice({ ...initial, ...edited, price: edited.price! }));
-                 } else { // It's a new entry
-                     promises.push(api.addSpecialPrice({ distributorId, skuId: sku.id, price: edited.price!, startDate: edited.startDate!, endDate: edited.endDate! }));
-                 }
-            } else {
-                 const initial = initialPriceMap.get(sku.id);
-                 if (initial) { // It needs to be deleted
-                     promises.push(api.deleteSpecialPrice(initial.id));
-                 }
+                if (editedPrice) {
+                    const hasData = editedPrice.price || editedPrice.startDate || editedPrice.endDate;
+                    if (originalPrice && !hasData) {
+                        await api.deleteSpecialPrice(originalPrice.id);
+                    } else if (originalPrice && hasData) {
+                        await api.updateSpecialPrice({ ...originalPrice, ...editedPrice });
+                    } else if (!originalPrice && hasData) {
+                        await api.addSpecialPrice({
+                            distributorId,
+                            skuId,
+                            price: Number(editedPrice.price!),
+                            startDate: editedPrice.startDate!,
+                            endDate: editedPrice.endDate!,
+                        });
+                    }
+                }
             }
+            onUpdate();
+            setIsEditing(false);
+        } catch (err) {
+            console.error("Failed to save special prices", err);
+            alert("Failed to save. Please check console for details.");
         }
-        
-        await Promise.all(promises);
-        onUpdate();
-        setIsEditing(false);
     };
-
-    const handleInputChange = (skuId: string, field: 'price' | 'startDate' | 'endDate', value: string) => {
-        const updatedRowData = {
-            ...editedPrices[skuId],
-            skuId: skuId,
-            [field]: field === 'price' ? (value === '' ? undefined : parseFloat(value)) : value,
-        };
-        setEditedPrices(prev => ({ ...prev, [skuId]: updatedRowData }));
-        validateRow(skuId, updatedRowData);
-    };
-
-    const hasErrors = Object.values(errors).some(err => Object.keys(err).length > 0);
     
+    const handleCancel = () => {
+        setIsEditing(false);
+        setErrors({});
+        // Reset editedPrices to initial state
+        const initialEdits: Record<string, Partial<Omit<SpecialPrice, 'id' | 'distributorId'>>> = {};
+        initialPrices.forEach(p => {
+            initialEdits[p.skuId] = { price: p.price, startDate: p.startDate, endDate: p.endDate };
+        });
+        setEditedPrices(initialEdits);
+    }
+
+    useEffect(() => {
+        handleCancel();
+    }, [initialPrices]);
+
     return (
-        <Card>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-                <h3 className="flex items-center text-lg font-semibold text-text-primary"><Star size={20} className="mr-3 text-yellow-500" />Special Pricing</h3>
-                {canEdit && !isEditing && <Button onClick={handleEditClick}><Edit size={16} className="mr-2"/> Manage Prices</Button>}
-            </div>
-            
-            <div className="overflow-x-auto">
-                <table className="w-full text-left min-w-[600px]">
-                    <thead className="bg-background">
-                        <tr className="border-b border-border">
-                            <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Product</th>
-                            <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center">Default Price</th>
-                            <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center">{isEditing ? 'Special Price' : 'Special Price'}</th>
-                            {isEditing && <>
-                                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center">Start Date</th>
-                                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center">End Date</th>
-                            </>}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {skus.map(sku => {
-                            if (isEditing) {
-                                const edited = editedPrices[sku.id] || {};
-                                const error = errors[sku.id] || {};
-                                return (
-                                    <tr key={sku.id} className="border-b border-border last:border-b-0">
-                                        <td className="p-2 font-medium">{sku.name}</td>
-                                        <td className="p-2 text-center text-text-secondary">{formatIndianCurrency(sku.price)}</td>
-                                        <td className="p-2 min-w-[120px]"><Input type="number" placeholder="Default" value={edited.price ?? ''} onChange={(e) => handleInputChange(sku.id, 'price', e.target.value)} error={error.price} /></td>
-                                        <td className="p-2 min-w-[160px]"><Input type="date" value={edited.startDate ?? ''} onChange={(e) => handleInputChange(sku.id, 'startDate', e.target.value)} error={error.startDate} /></td>
-                                        <td className="p-2 min-w-[200px]"><Input type="date" value={edited.endDate ?? ''} onChange={(e) => handleInputChange(sku.id, 'endDate', e.target.value)} error={error.endDate} /></td>
-                                    </tr>
-                                );
-                            } else {
-                                const special = initialPrices.find(p => p.skuId === sku.id);
-                                return (
-                                    <tr key={sku.id} className="border-b border-border last:border-b-0">
-                                        <td className="p-3 font-medium">{sku.name}</td>
-                                        <td className="p-3 text-center text-text-secondary">{formatIndianCurrency(sku.price)}</td>
-                                        <td className={`p-3 font-semibold text-center ${special ? 'text-text-primary' : 'text-text-secondary opacity-60'}`}>
-                                            {special ? formatIndianCurrency(special.price) : 'N/A'}
-                                            {special && <p className="text-xs font-normal text-text-secondary">({special.startDate} to {special.endDate})</p>}
-                                        </td>
-                                    </tr>
-                                )
-                            }
-                        })}
-                    </tbody>
-                </table>
-            </div>
-            {isEditing && (
-                <div className="flex justify-end gap-2 mt-4">
-                    <Button onClick={handleSave} size="sm" disabled={hasErrors}>Save Changes</Button>
-                    <Button onClick={handleCancel} variant="secondary" size="sm">Cancel</Button>
+    <Card>
+        <div className="flex justify-between items-center mb-4">
+            <h3 className="flex items-center text-lg font-semibold text-text-primary"><Star size={20} className="mr-3" />Special Prices</h3>
+            {canEdit && (
+                <div className="flex gap-2">
+                    {isEditing ? (
+                        <>
+                            <Button onClick={handleSave} size="sm"><Save size={16}/> Save</Button>
+                            <Button onClick={handleCancel} variant="secondary" size="sm"><X size={16}/> Cancel</Button>
+                        </>
+                    ) : (
+                        <Button onClick={() => setIsEditing(true)} variant="secondary" size="sm"><Edit size={16}/> Edit</Button>
+                    )}
                 </div>
             )}
-        </Card>
+        </div>
+        <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[600px] text-sm">
+                <thead>
+                    <tr className="bg-slate-50">
+                        <th className="p-2 font-semibold text-text-secondary">Product (Default Price)</th>
+                        <th className="p-2 font-semibold text-text-secondary">Special Price</th>
+                        <th className="p-2 font-semibold text-text-secondary">Start Date</th>
+                        <th className="p-2 font-semibold text-text-secondary">End Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {skus.map(sku => {
+                        const price = initialPrices.find(p => p.skuId === sku.id);
+                        const edited = editedPrices[sku.id] || {};
+                        const error = errors[sku.id] || {};
+
+                        return (
+                            <tr key={sku.id} className="border-b border-border last:border-0">
+                                <td className="p-2 font-medium">{sku.name} <span className="text-xs text-text-secondary">({formatIndianCurrency(sku.price)})</span></td>
+                                {isEditing ? (
+                                    <>
+                                        <td className="p-2"><Input type="number" placeholder="e.g., 85" value={edited.price ?? ''} onChange={e => handlePriceChange(sku.id, 'price', e.target.value)} error={error.price}/></td>
+                                        <td className="p-2"><Input type="date" value={edited.startDate ?? ''} onChange={e => handlePriceChange(sku.id, 'startDate', e.target.value)} error={error.startDate}/></td>
+                                        <td className="p-2"><Input type="date" value={edited.endDate ?? ''} onChange={e => handlePriceChange(sku.id, 'endDate', e.target.value)} error={error.endDate}/></td>
+                                    </>
+                                ) : (
+                                    <>
+                                        <td className={`p-2 font-semibold ${price ? 'text-green-600' : 'text-text-secondary'}`}>{price ? formatIndianCurrency(price.price) : 'Default'}</td>
+                                        <td className="p-2">{price?.startDate}</td>
+                                        <td className="p-2">{price?.endDate}</td>
+                                    </>
+                                )}
+                            </tr>
+                        )
+                    })}
+                </tbody>
+            </table>
+        </div>
+    </Card>
     );
 };
 
 // --- SpecialSchemesManager Sub-component ---
 type SchemeFormInputs = Omit<Scheme, 'id' | 'isGlobal' | 'distributorId'>;
 
-const SpecialSchemesManager: React.FC<{ distributorId: string; initialSchemes: Scheme[]; skus: SKU[]; onUpdate: () => void; canEdit: boolean }> = ({ distributorId, initialSchemes, skus, onUpdate, canEdit }) => {
-    const { userRole } = useAuth();
-    const [editingSchemeId, setEditingSchemeId] = useState<string | null>(null);
+interface SpecialSchemesManagerProps {
+    distributorId: string;
+    initialSchemes: Scheme[];
+    skus: SKU[];
+    onUpdate: () => void;
+    canEdit: boolean;
+    userRole: UserRole | null;
+}
 
-    const { register, handleSubmit, formState: { errors, isValid }, reset, watch } = useForm<SchemeFormInputs>({
-        mode: 'onBlur',
-    });
+const SpecialSchemesManager: React.FC<SpecialSchemesManagerProps> = ({ distributorId, initialSchemes, skus, onUpdate, canEdit, userRole }) => {
+    const [editingScheme, setEditingScheme] = useState<Partial<Scheme> | null>(null);
+
+    const { register, handleSubmit, formState: { errors, isValid }, reset, watch } = useForm<SchemeFormInputs>({mode: 'onBlur'});
     const watchStartDate = watch('startDate');
-
+    
     const handleAddNew = () => {
-        reset({ 
-            buySkuId: skus[0]?.id || '', 
-            getSkuId: skus[0]?.id || '', 
-            buyQuantity: 1, 
-            getQuantity: 1, 
-            description: '',
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: '',
+        reset({
+          description: '',
+          buySkuId: skus[0]?.id || '',
+          buyQuantity: 10,
+          getSkuId: skus[0]?.id || '',
+          getQuantity: 1,
+          startDate: new Date().toISOString().split('T')[0],
+          endDate: '',
         });
-        setEditingSchemeId('new');
+        setEditingScheme({ id: 'new' });
     };
-
+    
     const handleEdit = (scheme: Scheme) => {
         reset(scheme);
-        setEditingSchemeId(scheme.id);
+        setEditingScheme(scheme);
     };
 
     const handleCancel = () => {
-        setEditingSchemeId(null);
+        setEditingScheme(null);
         reset({});
     };
 
+    const handleDelete = async (schemeId: string) => {
+        if (userRole && window.confirm('Are you sure you want to delete this special scheme?')) {
+            try {
+                await api.deleteScheme(schemeId, userRole);
+                onUpdate();
+            } catch (err) {
+                alert((err as Error).message);
+            }
+        }
+    }
+
     const onSave: SubmitHandler<SchemeFormInputs> = async (data) => {
         if (!userRole) return;
-        const isAdding = editingSchemeId === 'new';
-
         try {
-             if (isAdding) {
-                const payload = { ...data, isGlobal: false, distributorId };
-                await api.addScheme(payload, userRole);
+            if (editingScheme?.id === 'new') {
+                await api.addScheme({ ...data, distributorId, isGlobal: false }, userRole);
             } else {
-                await api.updateScheme({ ...data, id: editingSchemeId!, isGlobal: false, distributorId }, userRole);
+                await api.updateScheme({ ...data, id: editingScheme!.id!, distributorId, isGlobal: false }, userRole);
             }
             onUpdate();
             handleCancel();
         } catch (err) {
-            console.error(err);
+            console.error("Failed to save scheme:", err);
+            alert("Failed to save scheme.");
         }
     };
     
-     const handleDelete = async (id: string) => {
-        if (userRole && window.confirm('Delete this special scheme?')) {
-            await api.deleteScheme(id, userRole);
-            onUpdate();
-        }
-    };
-
-    const getSkuName = (id?: string) => skus.find(sku => sku.id === id)?.name || 'N/A';
-
-    const renderEditRow = () => (
-        <tr className="bg-blue-50">
-            <td className="p-2 min-w-[200px]"><Input placeholder="e.g., Monsoon Bonanza" {...register('description', { required: 'Description is required' })} error={errors.description?.message} /></td>
-            <td className="p-2 min-w-[250px]">
-                <div className="flex gap-2 items-center">
-                    <Input type="number" className="w-20" {...register('buyQuantity', { required: true, valueAsNumber: true, min: 1 })} />
-                    <span>x</span>
-                    <Select {...register('buySkuId', { required: true })}>{skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
+    const getSkuName = (id?: string) => skus.find(s => s.id === id)?.name || 'N/A';
+    
+    const renderEditor = () => (
+        <Card className="mt-4 border-t-2 border-primary">
+            <form onSubmit={handleSubmit(onSave)}>
+                <h4 className="text-md font-bold mb-4">{editingScheme?.id === 'new' ? 'New Special Scheme' : 'Edit Special Scheme'}</h4>
+                <div className="space-y-4">
+                    <Input label="Description" {...register('description', { required: "Description is required" })} error={errors.description?.message} />
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input label="Start Date" type="date" {...register('startDate', { required: "Start date is required" })} error={errors.startDate?.message} />
+                        <Input label="End Date" type="date" {...register('endDate', { required: "End date is required", validate: v => !watchStartDate || v >= watchStartDate || 'Must be after start' })} error={errors.endDate?.message} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-2 border rounded-md bg-background">
+                            <p className="font-semibold text-sm mb-1">Condition (Buy)</p>
+                            <div className="flex gap-2">
+                                <Input label="Qty" type="number" {...register('buyQuantity', { required: true, valueAsNumber: true, min: 1 })} error={errors.buyQuantity?.message} />
+                                <Select label="Product" {...register('buySkuId', { required: true })}>
+                                    {skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </Select>
+                            </div>
+                        </div>
+                         <div className="p-2 border rounded-md bg-green-50">
+                            <p className="font-semibold text-sm mb-1">Reward (Get)</p>
+                            <div className="flex gap-2">
+                                <Input label="Qty" type="number" {...register('getQuantity', { required: true, valueAsNumber: true, min: 1 })} error={errors.getQuantity?.message} />
+                                <Select label="Product" {...register('getSkuId', { required: true })}>
+                                    {skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </Select>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button type="button" onClick={handleCancel} variant="secondary"><X size={16}/> Cancel</Button>
+                        <Button type="submit" disabled={!isValid}><Save size={16}/> Save</Button>
+                    </div>
                 </div>
-            </td>
-            <td className="p-2 min-w-[250px]">
-                <div className="flex gap-2 items-center">
-                    <Input type="number" className="w-20" {...register('getQuantity', { required: true, valueAsNumber: true, min: 1 })} />
-                    <span>x</span>
-                    <Select {...register('getSkuId', { required: true })}>{skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
-                </div>
-            </td>
-            <td className="p-2 min-w-[160px]">
-                <Input type="date" {...register('startDate', { required: true })} error={errors.startDate?.message} />
-            </td>
-            <td className="p-2 min-w-[160px]">
-                <Input type="date" {...register('endDate', { 
-                    required: true, 
-                    validate: (value) => !watchStartDate || value >= watchStartDate || 'End date must be on or after start date' 
-                })} error={errors.endDate?.message} />
-            </td>
-            <td className="p-2 text-right space-x-2">
-                <Button onClick={handleSubmit(onSave)} size="sm" className="p-2" disabled={!isValid}><Save size={16} /></Button>
-                <Button onClick={handleCancel} variant="secondary" size="sm" className="p-2"><X size={16} /></Button>
-            </td>
-        </tr>
+            </form>
+        </Card>
     );
 
     return (
         <Card>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-                <h3 className="flex items-center text-lg font-semibold text-text-primary"><Sparkles size={20} className="mr-3 text-primary" />Special Schemes</h3>
-                {canEdit && <Button onClick={handleAddNew} disabled={!!editingSchemeId}><PlusCircle size={16} className="mr-2"/> Add Scheme</Button>}
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="flex items-center text-lg font-semibold text-text-primary"><Sparkles size={20} className="mr-3" />Special Schemes</h3>
+                {canEdit && (
+                    <Button onClick={handleAddNew} size="sm" variant="secondary" disabled={!!editingScheme}>
+                        <PlusCircle size={16}/> Add Scheme
+                    </Button>
+                )}
             </div>
-            
-            <div className="overflow-x-auto">
-                <table className="w-full text-left min-w-[1000px]">
-                    <thead className="bg-background">
-                        <tr className="border-b border-border">
-                            <th className="p-3 w-1/4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Description</th>
-                            <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Buy</th>
-                            <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Get Free</th>
-                            <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Start Date</th>
-                            <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">End Date</th>
-                            {canEdit && <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Actions</th>}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {editingSchemeId === 'new' && renderEditRow()}
-                        {initialSchemes.map(s => (
-                             editingSchemeId === s.id
-                             ? renderEditRow()
-                             : (
-                                <tr key={s.id} className="border-b border-border last:border-b-0">
-                                    <td className="p-3">{s.description}</td>
-                                    <td className="p-3">{s.buyQuantity} x {getSkuName(s.buySkuId)}</td>
-                                    <td className="p-3">{s.getQuantity} x {getSkuName(s.getSkuId)}</td>
-                                    <td className="p-3">{s.startDate}</td>
-                                    <td className="p-3">{s.endDate}</td>
-                                    {canEdit && 
-                                        <td className="p-3 text-right space-x-2">
-                                            <Button onClick={() => handleEdit(s)} variant="secondary" size="sm" className="p-2" disabled={!!editingSchemeId}><Edit size={16}/></Button>
-                                            <Button onClick={() => handleDelete(s.id)} variant="danger" size="sm" className="p-2" disabled={!!editingSchemeId}><Trash2 size={16}/></Button>
-                                        </td>
-                                    }
-                                </tr>
-                            )
-                        ))}
-                        {initialSchemes.length === 0 && editingSchemeId !== 'new' && (
-                            <tr><td colSpan={canEdit ? 6 : 5} className="text-center p-4 text-gray-500">No special schemes assigned to this distributor.</td></tr>
-                        )}
-                    </tbody>
-                </table>
+            <div className="space-y-3">
+                {initialSchemes.map(scheme => (
+                    <div key={scheme.id} className="p-3 bg-slate-50 rounded-lg">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="font-semibold">{scheme.description}</p>
+                                <p className="text-sm text-text-secondary">
+                                    Buy {scheme.buyQuantity} x {getSkuName(scheme.buySkuId)}, Get {scheme.getQuantity} x {getSkuName(scheme.getSkuId)} Free
+                                </p>
+                                <p className="text-xs text-text-secondary mt-1">Active: {scheme.startDate} to {scheme.endDate}</p>
+                            </div>
+                            {canEdit && !editingScheme && (
+                                <div className="flex gap-2 flex-shrink-0 ml-4">
+                                    <Button onClick={() => handleEdit(scheme)} size="sm" variant="secondary" className="p-1 h-7 w-7"><Edit size={14}/></Button>
+                                    {userRole === UserRole.SUPER_ADMIN && <Button onClick={() => handleDelete(scheme.id)} size="sm" variant="danger" className="p-1 h-7 w-7"><Trash2 size={14}/></Button>}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
+                {initialSchemes.length === 0 && <p className="text-sm text-center text-text-secondary py-4">No special schemes assigned.</p>}
             </div>
+            {editingScheme && renderEditor()}
         </Card>
     );
-}
+};
 
 export default DistributorDetailsPage;

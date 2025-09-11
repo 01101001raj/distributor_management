@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../services/mockApiService';
 import { Distributor, Order, OrderStatus } from '../types';
 import Card from './common/Card';
-import { DollarSign, Search, Users, Package } from 'lucide-react';
+import { DollarSign, Search, Users, Package, CheckCircle } from 'lucide-react';
 import Input from './common/Input';
 import { formatIndianCurrency } from '../utils/formatting';
+import { useSortableData } from '../hooks/useSortableData';
+import SortableTableHeader from './common/SortableTableHeader';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -40,14 +42,18 @@ const Dashboard: React.FC = () => {
   const totalDistributors = distributors.length;
   
   const pendingOrders = orders.filter(o => o.status === OrderStatus.PENDING).length;
+  
+  const deliveredOrders = orders.filter(o => o.status === OrderStatus.DELIVERED).length;
 
-  const filteredDistributors = distributors.filter(d =>
+  const filteredDistributors = useMemo(() => distributors.filter(d =>
     d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     d.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     d.state.toLowerCase().includes(searchTerm.toLowerCase()) ||
     d.area.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ), [distributors, searchTerm]);
   
+  const { items: sortedDistributors, requestSort: requestDistributorSort, sortConfig: distributorSortConfig } = useSortableData(filteredDistributors, { key: 'name', direction: 'ascending' });
+
   const distributorFinancials = useMemo(() => {
     return distributors.map(distributor => {
         const pendingOrderTotal = orders
@@ -57,8 +63,10 @@ const Dashboard: React.FC = () => {
             ...distributor,
             pendingOrderTotal,
         };
-    }).sort((a, b) => a.walletBalance - b.walletBalance);
+    });
   }, [distributors, orders]);
+  
+  const { items: sortedFinancials, requestSort: requestFinancialsSort, sortConfig: financialsSortConfig } = useSortableData(distributorFinancials, { key: 'walletBalance', direction: 'ascending' });
 
   const financialTotals = useMemo(() => {
     return distributorFinancials.reduce(
@@ -78,10 +86,10 @@ const Dashboard: React.FC = () => {
   
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-blue-100 text-primary mr-4">
+            <div className="p-3 rounded-full bg-primary/10 text-primary mr-4">
               <DollarSign />
             </div>
             <div>
@@ -92,7 +100,7 @@ const Dashboard: React.FC = () => {
         </Card>
         <Card>
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+            <div className="p-3 rounded-full bg-green-500/10 text-green-600 mr-4">
               <Users />
             </div>
             <div>
@@ -103,12 +111,23 @@ const Dashboard: React.FC = () => {
         </Card>
         <Card>
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+            <div className="p-3 rounded-full bg-yellow-500/10 text-yellow-600 mr-4">
               <Package />
             </div>
             <div>
               <p className="text-sm font-medium text-text-secondary">Pending Orders</p>
               <p className="text-2xl font-bold">{pendingOrders}</p>
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-blue-500/10 text-blue-600 mr-4">
+              <CheckCircle />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-text-secondary">Delivered Orders</p>
+              <p className="text-2xl font-bold">{deliveredOrders}</p>
             </div>
           </div>
         </Card>
@@ -124,23 +143,23 @@ const Dashboard: React.FC = () => {
                 placeholder="Search by name, ID, area..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                icon={<Search size={16} className="text-text-secondary" />}
+                icon={<Search size={16} />}
               />
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[600px]">
-              <thead className="bg-background">
-                <tr className="border-b border-border">
-                  <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Unique ID</th>
-                  <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Firm Name</th>
-                  <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">State</th>
-                  <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Area</th>
+            <table className="w-full text-left min-w-[600px] text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <SortableTableHeader label="Unique ID" sortKey="id" requestSort={requestDistributorSort} sortConfig={distributorSortConfig} />
+                  <SortableTableHeader label="Firm Name" sortKey="name" requestSort={requestDistributorSort} sortConfig={distributorSortConfig} />
+                  <SortableTableHeader label="State" sortKey="state" requestSort={requestDistributorSort} sortConfig={distributorSortConfig} />
+                  <SortableTableHeader label="Area" sortKey="area" requestSort={requestDistributorSort} sortConfig={distributorSortConfig} />
                 </tr>
               </thead>
               <tbody>
-                {filteredDistributors.map(d => (
-                  <tr key={d.id} onClick={() => navigate(`/distributors/${d.id}`)} className="border-b border-border last:border-b-0 hover:bg-background cursor-pointer">
+                {sortedDistributors.map(d => (
+                  <tr key={d.id} onClick={() => navigate(`/distributors/${d.id}`)} className="border-b border-border last:border-b-0 hover:bg-slate-50 cursor-pointer">
                     <td className="p-3 font-mono text-xs text-text-secondary">{d.id}</td>
                     <td className="p-3 font-semibold text-primary hover:underline">{d.name}</td>
                     <td className="p-3 text-text-primary">{d.state}</td>
@@ -149,7 +168,7 @@ const Dashboard: React.FC = () => {
                 ))}
               </tbody>
             </table>
-            {filteredDistributors.length === 0 && (
+            {sortedDistributors.length === 0 && (
               <div className="text-center p-6 text-text-secondary">
                 <p>No distributors found for "{searchTerm}".</p>
               </div>
@@ -159,20 +178,20 @@ const Dashboard: React.FC = () => {
         <Card>
            <h3 className="text-lg font-semibold text-text-primary mb-4">Distributor Financials</h3>
            <div className="overflow-x-auto max-h-[400px]">
-                <table className="w-full text-left">
-                    <thead className="bg-background sticky top-0">
-                        <tr className="border-b border-border">
-                            <th className="p-2 text-xs font-semibold text-text-secondary uppercase tracking-wider">Distributor</th>
-                            <th className="p-2 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Balance</th>
-                            <th className="p-2 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Pending Orders</th>
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 sticky top-0">
+                        <tr>
+                            <SortableTableHeader label="Distributor" sortKey="name" requestSort={requestFinancialsSort} sortConfig={financialsSortConfig} />
+                            <SortableTableHeader label="Balance" sortKey="walletBalance" requestSort={requestFinancialsSort} sortConfig={financialsSortConfig} className="text-right" />
+                            <SortableTableHeader label="Pending" sortKey="pendingOrderTotal" requestSort={requestFinancialsSort} sortConfig={financialsSortConfig} className="text-right" />
                         </tr>
                     </thead>
                      <tbody>
-                        {distributorFinancials.map(d => {
+                        {sortedFinancials.map(d => {
                             return (
-                                <tr key={d.id} className="border-b border-border last:border-b-0 hover:bg-background cursor-pointer" onClick={() => navigate(`/distributors/${d.id}`)}>
+                                <tr key={d.id} className="border-b border-border last:border-b-0 hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`/distributors/${d.id}`)}>
                                     <td className="p-2">
-                                        <p className="font-medium text-sm text-primary hover:underline">{d.name}</p>
+                                        <p className="font-medium text-primary hover:underline truncate">{d.name}</p>
                                         <p className="font-mono text-xs text-text-secondary">{d.id}</p>
                                     </td>
                                     <td className="p-2 text-right">
@@ -185,7 +204,7 @@ const Dashboard: React.FC = () => {
                             )
                         })}
                     </tbody>
-                    <tfoot className="bg-background border-t-2 border-border">
+                    <tfoot className="bg-slate-50 border-t-2 border-border">
                         <tr className="font-bold">
                             <td className="p-2">Total</td>
                             <td className="p-2 text-right">

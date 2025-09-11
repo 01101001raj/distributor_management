@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/mockApiService';
 import { Notification, NotificationType } from '../types';
@@ -68,11 +67,11 @@ const NotificationsPage: React.FC = () => {
                 <h2 className="text-2xl font-bold">Notifications</h2>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
                      <div className="flex gap-1 p-1 bg-background rounded-lg border border-border">
-                        <Button variant={filter === 'all' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('all')} className={`w-1/2 ${filter !== 'all' ? '!bg-transparent border-none shadow-none !text-text-secondary hover:!bg-gray-200' : 'shadow-md'}`}>All</Button>
-                        <Button variant={filter === 'unread' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('unread')} className={`w-1/2 ${filter !== 'unread' ? '!bg-transparent border-none shadow-none !text-text-secondary hover:!bg-gray-200' : 'shadow-md'}`}>Unread</Button>
+                        <Button variant={filter === 'all' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('all')} className={`w-1/2 ${filter !== 'all' ? '!bg-transparent border-none shadow-none !text-text-secondary hover:!bg-slate-200' : 'shadow'}`}>All</Button>
+                        <Button variant={filter === 'unread' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('unread')} className={`w-1/2 ${filter !== 'unread' ? '!bg-transparent border-none shadow-none !text-text-secondary hover:!bg-slate-200' : 'shadow'}`}>Unread</Button>
                     </div>
                     <Button onClick={handleMarkAllAsRead} variant="secondary" size="sm" disabled={notifications.every(n => n.isRead)}>
-                        <Check size={16} className="mr-2"/> Mark all as read
+                        <Check size={14}/> Mark all as read
                     </Button>
                 </div>
             </div>
@@ -81,16 +80,16 @@ const NotificationsPage: React.FC = () => {
             ) : (
                 <div className="space-y-3">
                     {filteredNotifications.length > 0 ? filteredNotifications.map(notification => (
-                        <div key={notification.id} className={`flex items-start p-4 rounded-lg transition-colors ${notification.isRead ? 'bg-background' : 'bg-white border border-border'}`}>
+                        <div key={notification.id} className={`flex items-start p-4 rounded-lg transition-colors ${notification.isRead ? 'bg-background' : 'bg-white border-2 border-primary/20'}`}>
                             <div className="flex-shrink-0 mr-4 mt-1">
                                 {NOTIFICATION_ICONS[notification.type]}
                             </div>
                             <div className="flex-grow">
-                                <p className={!notification.isRead ? 'font-semibold text-text-primary' : 'text-text-secondary'}>{notification.message}</p>
+                                <p className={`text-sm ${!notification.isRead ? 'font-semibold text-text-primary' : 'text-text-secondary'}`}>{notification.message}</p>
                                 <p className="text-xs text-text-secondary mt-1">{timeSince(notification.date)}</p>
                             </div>
                             {!notification.isRead && (
-                                <button title="Mark as read" onClick={() => handleMarkAsRead(notification.id)} className="ml-4 p-1 rounded-full hover:bg-gray-200">
+                                <button title="Mark as read" onClick={() => handleMarkAsRead(notification.id)} className="ml-4 p-1 rounded-full hover:bg-slate-200">
                                     <div className="w-2.5 h-2.5 bg-primary rounded-full"></div>
                                 </button>
                             )}

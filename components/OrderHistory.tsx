@@ -1,15 +1,17 @@
-
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Card from './common/Card';
 import Button from './common/Button';
 import { api } from '../services/mockApiService';
 import { Order, Distributor, EnrichedOrderItem, OrderStatus } from '../types';
-import { ChevronDown, ChevronRight, Gift, Edit, CheckCircle, XCircle, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, Gift, Edit, CheckCircle, XCircle, Search, FileText } from 'lucide-react';
 import EditOrderModal from './EditOrderModal';
 import { useAuth } from '../hooks/useAuth';
 import Input from './common/Input';
 import Select from './common/Select';
 import { formatIndianCurrency } from '../utils/formatting';
+import { useSortableData } from '../hooks/useSortableData';
+import SortableTableHeader from './common/SortableTableHeader';
+import { Link } from 'react-router-dom';
 
 const OrderHistory: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -23,6 +25,8 @@ const OrderHistory: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const { currentUser } = useAuth();
 
+  const getDistributorName = useCallback((id: string) => distributors.find(d => d.id === id)?.name || 'Unknown', [distributors]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -30,7 +34,7 @@ const OrderHistory: React.FC = () => {
         api.getOrders(),
         api.getDistributors(),
       ]);
-      setOrders(orderData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      setOrders(orderData);
       setDistributors(distributorData);
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -66,27 +70,33 @@ const OrderHistory: React.FC = () => {
       }
   };
 
-  const getDistributorName = (id: string) => distributors.find(d => d.id === id)?.name || 'Unknown';
-  
   const toggleExpand = (orderId: string) => {
     if (updatingOrderId) return;
     setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
   };
   
-  const filteredOrders = orders.filter(order => {
-      const distributorName = getDistributorName(order.distributorId).toLowerCase();
-      const search = searchTerm.toLowerCase().trim();
-      const matchesSearch = order.id.toLowerCase().includes(search) || distributorName.includes(search);
-      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-      return matchesSearch && matchesStatus;
-  });
+  const filteredOrders = useMemo(() => {
+    return orders
+      .map(order => ({
+        ...order,
+        distributorName: getDistributorName(order.distributorId),
+      }))
+      .filter(order => {
+        const search = searchTerm.toLowerCase().trim();
+        const matchesSearch = order.id.toLowerCase().includes(search) || order.distributorName.toLowerCase().includes(search);
+        const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+        return matchesSearch && matchesStatus;
+      });
+  }, [orders, searchTerm, statusFilter, getDistributorName]);
+
+  const { items: sortedOrders, requestSort, sortConfig } = useSortableData(filteredOrders, { key: 'date', direction: 'descending' });
   
   if (loading && orders.length === 0) {
     return <div className="text-center p-8">Loading order history...</div>;
   }
   
   const getStatusChip = (status: OrderStatus) => {
-      const baseClasses = "px-2.5 py-1 text-xs font-medium rounded-full inline-block";
+      const baseClasses = "px-2.5 py-1 text-xs font-semibold rounded-full inline-block";
       if (status === OrderStatus.DELIVERED) {
           return <span className={`${baseClasses} bg-green-100 text-green-700`}>{status}</span>;
       }
@@ -96,7 +106,7 @@ const OrderHistory: React.FC = () => {
   return (
     <>
       {statusMessage && (
-        <div className={`mb-4 flex items-center p-3 rounded-lg ${statusMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        <div className={`mb-4 flex items-center p-3 rounded-lg text-sm ${statusMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
             {statusMessage.type === 'success' ? <CheckCircle className="mr-2" /> : <XCircle className="mr-2" />}
             {statusMessage.text}
         </div>
@@ -122,51 +132,59 @@ const OrderHistory: React.FC = () => {
                         placeholder="Search by Order ID or Name..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        icon={<Search size={16} className="text-text-secondary" />}
+                        icon={<Search size={16} />}
                     />
                 </div>
             </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[700px]">
-            <thead className="bg-background">
-              <tr className="border-b border-border">
+          <table className="w-full text-left min-w-[700px] text-sm">
+            <thead className="bg-slate-50">
+              <tr>
                 <th className="p-3 w-12"></th>
-                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Order ID</th>
-                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Distributor</th>
-                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Date</th>
-                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Status</th>
-                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Total Amount</th>
-                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Actions</th>
+                <SortableTableHeader label="Order ID" sortKey="id" requestSort={requestSort} sortConfig={sortConfig} />
+                <SortableTableHeader label="Distributor" sortKey="distributorName" requestSort={requestSort} sortConfig={sortConfig} />
+                <SortableTableHeader label="Date" sortKey="date" requestSort={requestSort} sortConfig={sortConfig} />
+                <SortableTableHeader label="Status" sortKey="status" requestSort={requestSort} sortConfig={sortConfig} />
+                <SortableTableHeader label="Total Amount" sortKey="totalAmount" requestSort={requestSort} sortConfig={sortConfig} />
+                <th className="p-3 font-semibold text-text-secondary">Invoice</th>
+                <th className="p-3 font-semibold text-text-secondary">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.map(order => (
+              {sortedOrders.map(order => (
                 <React.Fragment key={order.id}>
                   <tr className="border-b border-border last:border-b-0">
                     <td className="p-3 text-center">
-                      <button onClick={() => toggleExpand(order.id)} className="hover:bg-gray-200 rounded-full p-1 disabled:opacity-50" disabled={!!updatingOrderId}>
+                      <button onClick={() => toggleExpand(order.id)} className="hover:bg-slate-100 rounded-full p-1 disabled:opacity-50" disabled={!!updatingOrderId}>
                         {expandedOrderId === order.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                       </button>
                     </td>
                     <td className="p-3 font-mono text-xs">{order.id}</td>
-                    <td className="p-3 font-medium">{getDistributorName(order.distributorId)}</td>
+                    <td className="p-3 font-medium">{order.distributorName}</td>
                     <td className="p-3">{new Date(order.date).toLocaleDateString()}</td>
                     <td className="p-3">{getStatusChip(order.status)}</td>
                     <td className="p-3 font-semibold">{formatIndianCurrency(order.totalAmount)}</td>
                     <td className="p-3">
+                        <Link to={`/invoice/${order.id}`} target="_blank" rel="noopener noreferrer">
+                            <Button size="sm" variant="secondary"><FileText size={14}/> View</Button>
+                        </Link>
+                    </td>
+                    <td className="p-3">
                         {order.status === OrderStatus.PENDING && (
                             <div className="flex gap-2">
-                                <Button size="sm" variant="secondary" onClick={() => setEditingOrder(order)} disabled={!!updatingOrderId}><Edit size={14} className="mr-1"/> Edit</Button>
-                                <Button size="sm" variant="primary" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleMarkDelivered(order.id)} isLoading={updatingOrderId === order.id} disabled={!!updatingOrderId}><CheckCircle size={14} className="mr-1"/> Deliver</Button>
+                                <Button size="sm" variant="secondary" onClick={() => setEditingOrder(order)} disabled={!!updatingOrderId}><Edit size={14}/> Edit</Button>
+                                <Button size="sm" variant="primary" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleMarkDelivered(order.id)} isLoading={updatingOrderId === order.id} disabled={!!updatingOrderId}><CheckCircle size={14}/> Deliver</Button>
                             </div>
                         )}
                     </td>
                   </tr>
                   {expandedOrderId === order.id && (
-                    <tr className="bg-background">
-                      <td colSpan={7} className="p-4">
-                        <OrderDetails orderId={order.id} />
+                    <tr className="bg-slate-50">
+                      <td colSpan={8} className="p-0">
+                        <div className="p-4">
+                          <OrderDetails orderId={order.id} />
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -175,7 +193,7 @@ const OrderHistory: React.FC = () => {
             </tbody>
           </table>
           {loading && orders.length === 0 ? null : (
-              filteredOrders.length === 0 ? (
+              sortedOrders.length === 0 ? (
                   <p className="text-center p-4 text-text-secondary">
                       {searchTerm || statusFilter !== 'all' ? `No orders found matching your filters.` : "No orders have been placed yet."}
                   </p>
@@ -208,19 +226,19 @@ const OrderDetails: React.FC<{ orderId: string }> = ({ orderId }) => {
         });
     }, [orderId]);
 
-    if (loading) return <div className="p-2">Loading items...</div>
+    if (loading) return <div className="p-2 text-sm">Loading items...</div>
 
     return (
         <div className="bg-card p-4 rounded-lg border border-border">
             <h4 className="font-bold mb-2 text-text-primary">Order Items</h4>
             <div className="overflow-x-auto">
-                <table className="w-full bg-white rounded-md min-w-[400px]">
+                <table className="w-full bg-white rounded-md min-w-[400px] text-sm">
                     <thead>
                         <tr className="text-left border-b border-border">
-                            <th className="p-2 text-sm text-text-secondary font-medium">Product</th>
-                            <th className="p-2 text-sm text-text-secondary font-medium text-center">Quantity</th>
-                            <th className="p-2 text-sm text-text-secondary font-medium text-right">Unit Price</th>
-                            <th className="p-2 text-sm text-text-secondary font-medium text-right">Subtotal</th>
+                            <th className="p-2 font-semibold text-text-secondary">Product</th>
+                            <th className="p-2 font-semibold text-text-secondary text-center">Quantity</th>
+                            <th className="p-2 font-semibold text-text-secondary text-right">Unit Price</th>
+                            <th className="p-2 font-semibold text-text-secondary text-right">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>

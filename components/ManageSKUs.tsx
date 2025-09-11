@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useEffect, useState } from 'react';
 import Card from './common/Card';
 import Button from './common/Button';
@@ -12,6 +8,8 @@ import { useAuth } from '../hooks/useAuth';
 import { PlusCircle, Edit, Save, X } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { formatIndianCurrency } from '../utils/formatting';
+import { useSortableData } from '../hooks/useSortableData';
+import SortableTableHeader from './common/SortableTableHeader';
 
 type SkuFormInputs = Omit<SKU, 'id'> & { id?: string };
 
@@ -24,6 +22,8 @@ const ManageSKUs: React.FC = () => {
   const { register, handleSubmit, formState: { errors, isValid }, reset } = useForm<SkuFormInputs>({
     mode: 'onBlur'
   });
+
+  const { items: sortedSkus, requestSort, sortConfig } = useSortableData(skus, { key: 'name', direction: 'ascending' });
 
   const fetchSKUs = () => {
       setLoading(true);
@@ -79,7 +79,7 @@ const ManageSKUs: React.FC = () => {
   }
 
   const renderEditRow = (skuId: string) => (
-    <tr className="bg-blue-50">
+    <tr className="bg-primary/5">
       <td className="p-2 font-mono text-xs">{skuId === 'new' ? 'NEW' : skuId}</td>
       <td className="p-2">
         <Input
@@ -111,25 +111,25 @@ const ManageSKUs: React.FC = () => {
     <Card>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h2 className="text-2xl font-bold">Manage Products (SKUs)</h2>
-        <Button onClick={handleAddNew} disabled={!!editingSkuId} className="w-full sm:w-auto"><PlusCircle size={16} className="mr-2"/> Add New SKU</Button>
+        <Button onClick={handleAddNew} disabled={!!editingSkuId} className="w-full sm:w-auto"><PlusCircle size={14}/> Add New SKU</Button>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-left min-w-[600px]">
-          <thead className="bg-background">
-            <tr className="border-b border-border">
-              <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">SKU ID</th>
-              <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Product Name</th>
-              <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Price</th>
-              <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Actions</th>
+        <table className="w-full text-left min-w-[600px] text-sm">
+          <thead className="bg-slate-50">
+            <tr>
+              <SortableTableHeader label="SKU ID" sortKey="id" requestSort={requestSort} sortConfig={sortConfig} />
+              <SortableTableHeader label="Product Name" sortKey="name" requestSort={requestSort} sortConfig={sortConfig} />
+              <SortableTableHeader label="Price" sortKey="price" requestSort={requestSort} sortConfig={sortConfig} />
+              <th className="p-3 font-semibold text-text-secondary text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {editingSkuId === 'new' && renderEditRow('new')}
-            {skus.map(sku => (
+            {sortedSkus.map(sku => (
               editingSkuId === sku.id ? (
                 renderEditRow(sku.id)
               ) : (
-                <tr key={sku.id} className="border-b border-border hover:bg-background">
+                <tr key={sku.id} className="border-b border-border hover:bg-slate-50">
                   <td className="p-3 font-mono text-xs text-text-secondary">{sku.id}</td>
                   <td className="p-3">{sku.name}</td>
                   <td className="p-3">{formatIndianCurrency(sku.price)}</td>

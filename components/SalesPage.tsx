@@ -8,23 +8,28 @@ import DateRangePicker from './common/DateRangePicker';
 import Button from './common/Button';
 import { ResponsiveContainer, LineChart, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar } from 'recharts';
 import { formatIndianCurrency, formatIndianNumber, formatIndianCurrencyShort } from '../utils/formatting';
+import { useSortableData } from '../hooks/useSortableData';
+import SortableTableHeader from './common/SortableTableHeader';
 
 interface StatCardProps {
     title: string;
     value: string;
     icon: React.ReactNode;
+    iconBgClass: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon }) => (
-    <div className="bg-background border border-border rounded-xl p-4 flex items-center">
-        <div className="p-3 rounded-full bg-blue-100 text-primary mr-4">
-            {icon}
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, iconBgClass }) => (
+    <Card>
+        <div className="flex items-center">
+            <div className={`p-3 rounded-full ${iconBgClass} mr-4`}>
+                {icon}
+            </div>
+            <div>
+                <p className="text-sm font-medium text-text-secondary">{title}</p>
+                <p className="text-2xl font-bold">{value}</p>
+            </div>
         </div>
-        <div>
-            <p className="text-sm font-medium text-text-secondary">{title}</p>
-            <p className="text-2xl font-bold">{value}</p>
-        </div>
-    </div>
+    </Card>
 );
 
 const PRODUCT_ORDER = [
@@ -42,7 +47,7 @@ const CustomStateTooltip = ({ active, payload, label }: any) => {
         const data = payload[0].payload;
         const total = data.value;
         return (
-            <div className="bg-white p-3 border rounded shadow-lg text-sm max-w-xs">
+            <div className="bg-white p-3 border rounded-lg shadow-lg text-sm max-w-xs">
                 <p className="font-bold mb-2 text-text-primary">{label}: {formatIndianCurrency(total)}</p>
                 <div className="space-y-1">
                     {data.areas.slice(0, 5).map((area: any) => (
@@ -227,7 +232,7 @@ const SalesPage: React.FC = () => {
         const distributorSales = Object.entries(distributorData).map(([distId, data]) => ({
             distributorName: distributorMap.get(distId)?.name || 'Unknown',
             ...data
-        })).sort((a,b) => a.distributorName.localeCompare(b.distributorName));
+        }));
         
         const productSummary = new Map<string, { paid: number, free: number }>();
         filteredOrderItems.forEach(item => {
@@ -248,7 +253,7 @@ const SalesPage: React.FC = () => {
             paid: data.paid,
             free: data.free,
             total: data.paid + data.free,
-        })).sort((a, b) => b.total - a.total);
+        }));
         
         const salesTotals: Record<string, any> = { amount: 0 };
         distributorSales.forEach(sale => {
@@ -287,7 +292,7 @@ const SalesPage: React.FC = () => {
             .map(([date, sales]) => ({ date, sales }))
             .sort((a, b) => a.date.localeCompare(b.date));
             
-        const topProductsData = productSalesSummary;
+        const topProductsData = productSalesSummary.sort((a, b) => b.total - a.total);
 
         const salesByStateAndArea = new Map<string, { total: number; areas: Map<string, number> }>();
         const distributorDetailsMap = new Map(distributors.map(d => [d.id, { state: d.state, area: d.area }]));
@@ -328,6 +333,9 @@ const SalesPage: React.FC = () => {
         return { totalSalesValue, distributorSales, totalPaidQty, totalFreeQty, productSalesSummary, salesTotals, filteredOrders, filteredOrderItems, salesTrendData, topProductsData, salesByStateData, salesByDistributorData };
     }, [orders, allOrderItems, distributors, skus, schemes, dateRange, selectedDistributorId, selectedState, selectedArea, selectedSchemeId, chartGranularity]);
     
+    const { items: sortedProductSummary, requestSort: requestProductSort, sortConfig: productSortConfig } = useSortableData(salesData.productSalesSummary, { key: 'total', direction: 'descending' });
+    const { items: sortedDistributorSales, requestSort: requestDistributorSalesSort, sortConfig: distributorSalesSortConfig } = useSortableData(salesData.distributorSales, { key: 'amount', direction: 'descending' });
+
     const formatDateForFilename = (date: Date | null) => date ? date.toISOString().split('T')[0] : '';
     const sanitize = (str: string) => str.replace(/[^a-z0-9]/gi, '_').toLowerCase();
     const escapeCsvCell = (cell: any): string => {
@@ -422,7 +430,7 @@ const SalesPage: React.FC = () => {
     };
 
     const handleExportTableCsv = () => {
-        const { distributorSales, salesTotals } = salesData;
+        const { salesTotals } = salesData;
         
         const filename = `summary_report_${getBaseFilename()}.csv`;
         
@@ -433,7 +441,7 @@ const SalesPage: React.FC = () => {
         });
         headers.push('Amount');
 
-        const rows = distributorSales.map(sale => {
+        const rows = sortedDistributorSales.map(sale => {
             const row: (string | number)[] = [sale.distributorName];
             PRODUCT_ORDER.forEach(name => {
                 row.push(sale[name] || 0);
@@ -493,16 +501,16 @@ const SalesPage: React.FC = () => {
                         {schemes.map(s => <option key={s.id} value={s.id}>{s.description}</option>)}
                     </Select>
                     <Button onClick={handleExportDetailedCsv} variant="secondary">
-                        <Download size={16} className="mr-2" />
+                        <Download size={16}/>
                         Export Detailed CSV
                     </Button>
                 </div>
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard title="Total Sales Value" value={formatIndianCurrency(salesData.totalSalesValue)} icon={<DollarSign />} />
-                <StatCard title="Total Paid Items" value={formatIndianNumber(salesData.totalPaidQty)} icon={<Package />} />
-                <StatCard title="Total Free Items" value={formatIndianNumber(salesData.totalFreeQty)} icon={<Gift />} />
+                <StatCard title="Total Sales Value" value={formatIndianCurrency(salesData.totalSalesValue)} icon={<DollarSign />} iconBgClass="bg-primary/10 text-primary" />
+                <StatCard title="Total Paid Items" value={formatIndianNumber(salesData.totalPaidQty)} icon={<Package />} iconBgClass="bg-green-500/10 text-green-600" />
+                <StatCard title="Total Free Items" value={formatIndianNumber(salesData.totalFreeQty)} icon={<Gift />} iconBgClass="bg-yellow-500/10 text-yellow-600" />
             </div>
             
             <Card>
@@ -516,7 +524,7 @@ const SalesPage: React.FC = () => {
                                     <button
                                         key={gran}
                                         onClick={() => setChartGranularity(gran)}
-                                        className={`px-2 py-0.5 text-xs rounded capitalize ${chartGranularity === gran ? 'bg-primary text-white shadow' : 'text-text-secondary'}`}
+                                        className={`px-2 py-0.5 text-xs rounded-md capitalize transition-colors ${chartGranularity === gran ? 'bg-primary text-white shadow' : 'text-text-secondary hover:bg-slate-200'}`}
                                     >
                                         {gran}
                                     </button>
@@ -526,11 +534,11 @@ const SalesPage: React.FC = () => {
                         {salesData.salesTrendData.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <LineChart data={salesData.salesTrendData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                     <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
                                     <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatIndianCurrencyShort(Number(value))} />
-                                    <Tooltip content={<CustomSalesTooltip />} cursor={{ fill: '#f9fafb' }} />
-                                    <Line type="monotone" dataKey="sales" stroke="#3B82F6" strokeWidth={2} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6, fill: '#3B82F6' }} />
+                                    <Tooltip content={<CustomSalesTooltip />} cursor={{ fill: '#f8f9fa' }} />
+                                    <Line type="monotone" dataKey="sales" stroke="#334155" strokeWidth={2} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6, fill: '#334155' }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         ) : <div className="flex items-center justify-center h-[300px] bg-background rounded-md text-text-secondary">No sales data for trend chart.</div>}
@@ -539,19 +547,19 @@ const SalesPage: React.FC = () => {
                         <div className="flex justify-center items-center mb-2 gap-4">
                             <h4 className="font-semibold text-center text-text-secondary">Top Selling Products</h4>
                             <div className="flex gap-1 p-0.5 bg-background rounded-md border border-border">
-                                <button onClick={() => setTopProductsCount(5)} className={`px-2 py-0.5 text-xs rounded ${topProductsCount === 5 ? 'bg-primary text-white shadow' : 'text-text-secondary'}`}>Top 5</button>
-                                <button onClick={() => setTopProductsCount(10)} className={`px-2 py-0.5 text-xs rounded ${topProductsCount === 10 ? 'bg-primary text-white shadow' : 'text-text-secondary'}`}>Top 10</button>
+                                <button onClick={() => setTopProductsCount(5)} className={`px-2 py-0.5 text-xs rounded-md transition-colors ${topProductsCount === 5 ? 'bg-primary text-white shadow' : 'text-text-secondary hover:bg-slate-200'}`}>Top 5</button>
+                                <button onClick={() => setTopProductsCount(10)} className={`px-2 py-0.5 text-xs rounded-md transition-colors ${topProductsCount === 10 ? 'bg-primary text-white shadow' : 'text-text-secondary hover:bg-slate-200'}`}>Top 10</button>
                             </div>
                         </div>
                          {salesData.topProductsData.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <RechartsBarChart data={salesData.topProductsData.slice(0, topProductsCount).reverse()} layout="vertical" margin={{ top: 5, right: 30, left: 50, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                     <XAxis type="number" fontSize={12} tickLine={false} axisLine={false} />
                                     <YAxis type="category" dataKey="skuName" width={100} fontSize={12} tickLine={false} axisLine={false} interval={0} />
-                                    <Tooltip formatter={(value) => formatIndianNumber(Number(value))} cursor={{fill: '#f9fafb'}} />
+                                    <Tooltip formatter={(value) => formatIndianNumber(Number(value))} cursor={{fill: '#f8f9fa'}} />
                                     <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                    <Bar dataKey="paid" name="Paid" stackId="a" fill="#3B82F6" barSize={20} />
+                                    <Bar dataKey="paid" name="Paid" stackId="a" fill="#334155" barSize={20} />
                                     <Bar dataKey="free" name="Free" stackId="a" fill="#82ca9d" barSize={20} />
                                 </RechartsBarChart>
                             </ResponsiveContainer>
@@ -564,10 +572,10 @@ const SalesPage: React.FC = () => {
                          {salesData.salesByStateData.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <RechartsBarChart data={salesData.salesByStateData.slice(0, 10).reverse()} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                     <XAxis type="number" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatIndianCurrencyShort(Number(value))} />
                                     <YAxis type="category" dataKey="name" width={80} fontSize={12} tickLine={false} axisLine={false} interval={0} />
-                                    <Tooltip content={<CustomStateTooltip />} cursor={{fill: '#f9fafb'}}/>
+                                    <Tooltip content={<CustomStateTooltip />} cursor={{fill: '#f8f9fa'}}/>
                                     <Bar dataKey="value" name="Sales" fill="#FFBB28" barSize={20} />
                                 </RechartsBarChart>
                             </ResponsiveContainer>
@@ -596,23 +604,23 @@ const SalesPage: React.FC = () => {
                     Total Quantity Sold Per Product
                 </h3>
                 <div className="overflow-x-auto max-h-96">
-                    <table className="w-full text-left min-w-[400px]">
-                        <thead className="bg-background sticky top-0">
-                            <tr className="border-b border-border">
-                                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Product</th>
-                                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Total Quantity Sold</th>
+                    <table className="w-full text-left min-w-[400px] text-sm">
+                        <thead className="bg-slate-50 sticky top-0">
+                            <tr>
+                                <SortableTableHeader label="Product" sortKey="skuName" requestSort={requestProductSort} sortConfig={productSortConfig} />
+                                <SortableTableHeader label="Total Quantity Sold" sortKey="total" requestSort={requestProductSort} sortConfig={productSortConfig} className="text-right" />
                             </tr>
                         </thead>
                         <tbody>
-                            {salesData.productSalesSummary.map((product, index) => (
-                                <tr key={index} className="border-b border-border last:border-b-0 hover:bg-background">
+                            {sortedProductSummary.map((product, index) => (
+                                <tr key={index} className="border-b border-border last:border-b-0 hover:bg-slate-50">
                                     <td className="p-3 font-medium text-text-primary">{product.skuName}</td>
                                     <td className="p-3 text-right font-semibold">{formatIndianNumber(product.total)}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                    {salesData.productSalesSummary.length === 0 && (
+                    {sortedProductSummary.length === 0 && (
                         <div className="text-center p-6 text-text-secondary">
                             <p>No products sold in the selected period.</p>
                         </div>
@@ -624,27 +632,27 @@ const SalesPage: React.FC = () => {
                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                     <h3 className="text-lg font-semibold text-text-primary">Distributor Sales Details</h3>
                     <Button onClick={handleExportTableCsv} variant="secondary" size="sm">
-                        <Table size={16} className="mr-2" />
+                        <Table size={16}/>
                         Export Table
                     </Button>
                 </div>
                 <div className="overflow-x-auto max-h-96">
-                    <table className="w-full text-left min-w-[1200px]">
-                        <thead className="bg-background sticky top-0">
-                            <tr className="border-b border-border">
-                                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider whitespace-nowrap">Distributor</th>
+                    <table className="w-full text-left min-w-[1200px] text-sm">
+                        <thead className="bg-slate-50 sticky top-0">
+                            <tr>
+                                <SortableTableHeader label="Distributor" sortKey="distributorName" requestSort={requestDistributorSalesSort as any} sortConfig={distributorSalesSortConfig} className="whitespace-nowrap"/>
                                 {PRODUCT_ORDER.map(name => (
                                     <React.Fragment key={name}>
-                                        <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center whitespace-nowrap">{name}</th>
-                                        <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-center whitespace-nowrap bg-green-50">{name} Free</th>
+                                        <SortableTableHeader label={name} sortKey={name as any} requestSort={requestDistributorSalesSort} sortConfig={distributorSalesSortConfig} className="text-center whitespace-nowrap" />
+                                        <th className="p-3 font-semibold text-text-secondary text-center whitespace-nowrap bg-green-50">{name} Free</th>
                                     </React.Fragment>
                                 ))}
-                                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right whitespace-nowrap">Amount</th>
+                                <SortableTableHeader label="Amount" sortKey="amount" requestSort={requestDistributorSalesSort as any} sortConfig={distributorSalesSortConfig} className="text-right whitespace-nowrap" />
                             </tr>
                         </thead>
                         <tbody>
-                            {salesData.distributorSales.map((sale, index) => (
-                                <tr key={index} className="border-b border-border last:border-b-0 hover:bg-background">
+                            {sortedDistributorSales.map((sale: any, index: number) => (
+                                <tr key={index} className="border-b border-border last:border-b-0 hover:bg-slate-50">
                                     <td className="p-3 font-medium text-text-primary whitespace-nowrap">{sale.distributorName}</td>
                                     {PRODUCT_ORDER.map(name => (
                                         <React.Fragment key={name}>
@@ -656,7 +664,7 @@ const SalesPage: React.FC = () => {
                                 </tr>
                             ))}
                         </tbody>
-                        <tfoot className="bg-background border-t-2 border-border">
+                        <tfoot className="bg-slate-100 border-t-2 border-border">
                             <tr className="font-bold text-text-primary">
                                 <td className="p-3 whitespace-nowrap">Total</td>
                                 {PRODUCT_ORDER.map(name => (
@@ -669,7 +677,7 @@ const SalesPage: React.FC = () => {
                             </tr>
                         </tfoot>
                     </table>
-                    {salesData.distributorSales.length === 0 && (
+                    {sortedDistributorSales.length === 0 && (
                         <div className="text-center p-6 text-text-secondary">
                             <p>No sales recorded for the selected period and filter.</p>
                         </div>

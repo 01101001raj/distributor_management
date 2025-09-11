@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
 import { Distributor, SKU, Scheme, SpecialPrice } from '../types';
 import { api } from '../services/mockApiService';
 import Card from './common/Card';
@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { PlusCircle, Trash2, CheckCircle, XCircle, Gift, Star, FileText } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { formatIndianCurrency } from '../utils/formatting';
+import Input from './common/Input';
 
 interface OrderItemState {
   id: string; // to track items for updates
@@ -271,7 +272,7 @@ const PlaceOrder: React.FC = () => {
             {distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </Select>
           {selectedDistributor && (
-            <div className="bg-background border border-border rounded-xl p-4">
+            <div className="bg-slate-50 border border-border rounded-lg p-4">
                 <div>
                     <p className="text-xs text-text-secondary">Wallet Balance</p>
                     <p className="text-lg font-bold text-text-primary">{formatIndianCurrency(selectedDistributor.walletBalance)}</p>
@@ -289,19 +290,18 @@ const PlaceOrder: React.FC = () => {
         <Card>
           <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
               <h3 className="text-lg font-semibold">Order Items</h3>
-              <Button onClick={handleAddSku} variant="secondary" size="sm"><PlusCircle size={16} className="mr-2"/> Add Item</Button>
+              <Button onClick={handleAddSku} variant="secondary" size="sm"><PlusCircle size={14}/> Add Item</Button>
           </div>
           <div className="space-y-2">
-            {orderItems.map((item, index) => (
-              <div key={item.id} className="grid grid-cols-12 gap-2 items-start p-2 rounded-md bg-background">
+            {orderItems.map((item) => (
+              <div key={item.id} className="grid grid-cols-12 gap-2 items-start p-2 rounded-md bg-slate-50">
                 <div className="col-span-12 sm:col-span-8">
-                  <Select id={`sku-${index}`} value={item.skuId} onChange={(e) => handleItemChange(item.id, 'skuId', e.target.value)} className="text-sm">
+                  <Select id={`sku-${item.id}`} value={item.skuId} onChange={(e: ChangeEvent<HTMLSelectElement>) => handleItemChange(item.id, 'skuId', e.target.value)}>
                     {skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </Select>
                 </div>
                 <div className="col-span-9 sm:col-span-3">
-                    <input type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 0)} className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-1 transition ${itemErrors[item.id] ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary focus:border-primary'}`} min="1"/>
-                    {itemErrors[item.id] && <p className="mt-1 text-xs text-red-600">{itemErrors[item.id]}</p>}
+                    <Input type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 0)} min="1" error={itemErrors[item.id]} />
                 </div>
                 <div className="col-span-3 sm:col-span-1 text-right self-center">
                   <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={20}/></button>
@@ -314,13 +314,13 @@ const PlaceOrder: React.FC = () => {
             <div className="mt-6 pt-4 border-t border-border">
               <h4 className="font-semibold mb-2">Order Summary</h4>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[500px]">
-                  <thead className="bg-background">
-                      <tr className="text-left text-text-secondary text-sm">
-                          <th className="p-2 font-medium">Product</th>
-                          <th className="p-2 font-medium text-center">Qty</th>
-                          <th className="p-2 font-medium text-right">Unit Price</th>
-                          <th className="p-2 font-medium text-right">Total</th>
+                <table className="w-full min-w-[500px] text-sm">
+                  <thead className="bg-slate-50">
+                      <tr>
+                          <th className="p-2 font-semibold text-text-secondary">Product</th>
+                          <th className="p-2 font-semibold text-text-secondary text-center">Qty</th>
+                          <th className="p-2 font-semibold text-text-secondary text-right">Unit Price</th>
+                          <th className="p-2 font-semibold text-text-secondary text-right">Total</th>
                       </tr>
                   </thead>
                   <tbody>
@@ -352,14 +352,14 @@ const PlaceOrder: React.FC = () => {
       )}
 
       {statusMessage && (
-          <div className={`flex flex-col sm:flex-row items-center justify-between p-3 rounded-lg mt-4 gap-2 ${statusMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          <div className={`flex flex-col sm:flex-row items-center justify-between p-3 rounded-lg mt-4 gap-2 text-sm ${statusMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
               <div className="flex items-center">
                   {statusMessage.type === 'success' ? <CheckCircle className="mr-2" /> : <XCircle className="mr-2" />}
                   {statusMessage.text}
               </div>
               {statusMessage.type === 'success' && statusMessage.orderId && (
                   <Button onClick={() => handleViewInvoice(statusMessage.orderId!)} size="sm" variant="primary" className="bg-green-600 hover:bg-green-700">
-                      <FileText size={16} className="mr-2"/> View Invoice
+                      <FileText size={14}/> View Invoice
                   </Button>
               )}
           </div>

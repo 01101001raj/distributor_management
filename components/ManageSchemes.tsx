@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useEffect, useState, useCallback } from 'react';
 import Card from './common/Card';
 import Button from './common/Button';
@@ -12,6 +8,8 @@ import { Scheme, SKU, UserRole } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { PlusCircle, Edit, Save, X, Trash2 } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
+import { useSortableData } from '../hooks/useSortableData';
+import SortableTableHeader from './common/SortableTableHeader';
 
 type SchemeFormInputs = Omit<Scheme, 'id' | 'isGlobal' | 'distributorId'>;
 
@@ -26,6 +24,8 @@ const ManageSchemes: React.FC = () => {
     mode: 'onBlur'
   });
   const watchStartDate = watch('startDate');
+
+  const { items: sortedSchemes, requestSort, sortConfig } = useSortableData(schemes, { key: 'description', direction: 'ascending' });
 
   const fetchSchemes = useCallback(() => {
     setLoading(true);
@@ -163,11 +163,11 @@ const ManageSchemes: React.FC = () => {
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4">
-                  <Button type="submit" size="md" isLoading={loading} disabled={!isValid}>
-                    <Save size={16} className="mr-2"/> Save Scheme
+                   <Button type="button" onClick={handleCancel} variant="secondary" size="md">
+                    <X size={16}/> Cancel
                   </Button>
-                  <Button type="button" onClick={handleCancel} variant="secondary" size="md">
-                    <X size={16} className="mr-2"/> Cancel
+                  <Button type="submit" size="md" isLoading={loading} disabled={!isValid}>
+                    <Save size={16}/> Save Scheme
                   </Button>
                 </div>
             </div>
@@ -180,20 +180,20 @@ const ManageSchemes: React.FC = () => {
       <Card>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <h2 className="text-2xl font-bold">Manage Global Schemes</h2>
-          <Button onClick={handleAddNew} disabled={!!editingSchemeId} className="w-full sm:w-auto"><PlusCircle size={16} className="mr-2" /> Add New Scheme</Button>
+          <Button onClick={handleAddNew} disabled={!!editingSchemeId} className="w-full sm:w-auto"><PlusCircle size={14} /> Add New Scheme</Button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[600px]">
-            <thead className="bg-background">
-              <tr className="border-b border-border">
-                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Description</th>
-                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Rule</th>
-                <th className="p-3 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Actions</th>
+          <table className="w-full text-left min-w-[600px] text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <SortableTableHeader label="Description" sortKey="description" requestSort={requestSort} sortConfig={sortConfig} />
+                <th className="p-3 font-semibold text-text-secondary">Rule</th>
+                <th className="p-3 font-semibold text-text-secondary text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {schemes.map(scheme => (
-                <tr key={scheme.id} className="border-b border-border hover:bg-background">
+              {sortedSchemes.map(scheme => (
+                <tr key={scheme.id} className="border-b border-border hover:bg-slate-50">
                   <td className="p-3 w-1/3 font-semibold">
                     {scheme.description}
                     <p className="text-xs font-normal text-text-secondary mt-1">
@@ -210,7 +210,7 @@ const ManageSchemes: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {schemes.length === 0 && (
+              {sortedSchemes.length === 0 && (
                   <tr>
                       <td colSpan={3} className="text-center p-4 text-text-secondary">No global schemes have been created yet.</td>
                   </tr>

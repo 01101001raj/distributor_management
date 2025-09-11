@@ -109,14 +109,14 @@ const DistributorOnboarding: React.FC = () => {
             error={errors.area?.message}
           />
         </div>
-        <div className="space-y-4">
+        <div className="space-y-2">
             <h3 className="text-sm font-medium text-text-secondary">Special Conditions</h3>
             <div className="flex items-center space-x-8">
-                 <label className="flex items-center space-x-2 cursor-pointer">
+                 <label className="flex items-center space-x-2 cursor-pointer text-sm">
                     <input type="checkbox" {...register('hasSpecialPricing')} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
                     <span>Eligible for Special Prices</span>
                  </label>
-                 <label className="flex items-center space-x-2 cursor-pointer">
+                 <label className="flex items-center space-x-2 cursor-pointer text-sm">
                     <input type="checkbox" {...register('hasSpecialSchemes')} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
                     <span>Eligible for Special Schemes</span>
                  </label>
@@ -127,8 +127,8 @@ const DistributorOnboarding: React.FC = () => {
             <label className="block text-sm font-medium text-text-secondary mb-1">
                 Agreement Upload
             </label>
-            <label htmlFor="agreementFile" className="relative cursor-pointer bg-white rounded-md border border-gray-300 hover:border-primary p-2 flex items-center justify-center">
-                 <FileUp className="w-5 h-5 text-black mr-2" />
+            <label htmlFor="agreementFile" className="relative cursor-pointer bg-white rounded-md border border-border hover:border-primary p-2 flex items-center justify-center">
+                 <FileUp className="w-5 h-5 text-text-secondary mr-2" />
                  <span className="text-sm text-text-secondary">{fileName || 'Click to upload a file'}</span>
                  <input id="agreementFile" type="file" {...register('agreementFile')} onChange={(e) => setFileName(e.target.files?.[0]?.name || '')} className="sr-only"/>
             </label>
@@ -141,7 +141,7 @@ const DistributorOnboarding: React.FC = () => {
         </div>
 
         {statusMessage && (
-            <div className={`flex items-center p-3 rounded-md mt-4 ${statusMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            <div className={`flex items-center p-3 rounded-md mt-4 text-sm ${statusMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                 {statusMessage.type === 'success' ? <CheckCircle className="mr-2" /> : <XCircle className="mr-2" />}
                 {statusMessage.text}
             </div>

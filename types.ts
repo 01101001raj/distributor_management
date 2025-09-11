@@ -51,6 +51,7 @@ export interface SKU {
   id: string;
   name: string;
   price: number;
+  hsnCode?: string;
 }
 
 export interface SpecialPrice {
@@ -110,6 +111,7 @@ export interface OrderItem {
 
 export interface EnrichedOrderItem extends OrderItem {
   skuName: string;
+  hsnCode?: string;
 }
 
 export interface Notification {
