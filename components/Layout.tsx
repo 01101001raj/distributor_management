@@ -1,5 +1,5 @@
-import React, { ReactNode, useState, useEffect } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { NAVIGATION_ITEMS } from '../constants';
 import { LogOut, Menu, X, ChevronsLeft, ChevronsRight, Briefcase } from 'lucide-react';
@@ -45,7 +45,7 @@ const SidebarContent: React.FC<{ userRole: UserRole; handleLogout: () => void; i
     </div>
   );
 
-const Layout: React.FC<{ children: ReactNode }> = ({ children }) => {
+const Layout: React.FC = () => {
   const { userRole, logout, currentUser } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -63,10 +63,6 @@ const Layout: React.FC<{ children: ReactNode }> = ({ children }) => {
   
   if (!userRole || !currentUser) {
       return null;
-  }
-  
-  if (location.pathname.startsWith('/invoice/')) {
-    return <>{children}</>;
   }
 
   const getPageTitle = () => {
@@ -115,7 +111,7 @@ const Layout: React.FC<{ children: ReactNode }> = ({ children }) => {
           </div>
         </header>
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background p-6 lg:p-8">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

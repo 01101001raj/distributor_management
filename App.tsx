@@ -25,14 +25,14 @@ function App() {
       <HashRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/*" element={<ProtectedRoutes />} />
+          <Route path="/*" element={<ProtectedApp />} />
         </Routes>
       </HashRouter>
     </AuthProvider>
   );
 }
 
-function ProtectedRoutes() {
+function ProtectedApp() {
   const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
@@ -40,8 +40,9 @@ function ProtectedRoutes() {
   }
 
   return (
-    <Layout>
-      <Routes>
+    <Routes>
+      {/* Routes that need the main layout */}
+      <Route element={<Layout />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="add-distributor" element={<DistributorOnboarding />} />
@@ -57,10 +58,12 @@ function ProtectedRoutes() {
         <Route path="distributor-scorecard" element={<DistributorScorecardPage />} />
         <Route path="ceo-insights" element={<CEOInsightsPage />} />
         <Route path="user-management" element={<UserManagement />} />
-        <Route path="invoice/:orderId" element={<Invoice />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </Layout>
+      </Route>
+      
+      {/* Standalone routes that do not use the main layout */}
+      <Route path="invoice/:orderId" element={<Invoice />} />
+    </Routes>
   );
 }
 
