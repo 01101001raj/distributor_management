@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/mockApiService';
-import { Order, Distributor, OrderStatus, OrderItem, SKU, Scheme } from '../types';
+import { Order, Distributor, OrderStatus, OrderItem, SKU } from '../types';
 import Card from './common/Card';
 import Select from './common/Select';
-import { DollarSign, Package, Gift, TrendingUp, BarChart, Download } from 'lucide-react';
+import { DollarSign, Package, Gift, Download, TrendingUp, BarChart } from 'lucide-react';
 import DateRangePicker from './common/DateRangePicker';
 import Button from './common/Button';
+import { ResponsiveContainer, LineChart, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar } from 'recharts';
+
 
 interface StatCardProps {
     title: string;
@@ -49,7 +51,6 @@ const SalesPage: React.FC = () => {
     const [allOrderItems, setAllOrderItems] = useState<OrderItem[]>([]);
     const [distributors, setDistributors] = useState<Distributor[]>([]);
     const [skus, setSkus] = useState<SKU[]>([]);
-    const [schemes, setSchemes] = useState<Scheme[]>([]);
     const [loading, setLoading] = useState(true);
     const [dateRange, setDateRange] = useState(getInitialDateRange());
     const [selectedDistributorId, setSelectedDistributorId] = useState<string>('all');
@@ -58,18 +59,16 @@ const SalesPage: React.FC = () => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [orderData, distributorData, skuData, orderItemData, schemeData] = await Promise.all([
+                const [orderData, distributorData, skuData, orderItemData] = await Promise.all([
                     api.getOrders(),
                     api.getDistributors(),
                     api.getSKUs(),
                     api.getAllOrderItems(),
-                    api.getSchemes(),
                 ]);
                 setOrders(orderData);
                 setDistributors(distributorData);
                 setSkus(skuData);
                 setAllOrderItems(orderItemData);
-                setSchemes(schemeData);
             } catch (error) {
                 console.error("Failed to fetch sales data:", error);
             } finally {
@@ -84,14 +83,15 @@ const SalesPage: React.FC = () => {
         if (!from) {
             return {
                 totalSalesValue: 0,
-                schemeSales: [],
-                totalSchemePaidQty: 0,
-                totalSchemeFreeQty: 0,
-                totalNonSchemeQty: 0,
+                distributorSales: [],
+                totalPaidQty: 0,
+                totalFreeQty: 0,
                 productSalesSummary: [],
-                schemeTotals: {},
+                salesTotals: {},
                 filteredOrders: [],
                 filteredOrderItems: [],
+                salesTrendData: [],
+                topProductsData: [],
             };
         }
 
@@ -112,15 +112,12 @@ const SalesPage: React.FC = () => {
         const filteredOrderIds = new Set(filteredOrders.map(o => o.id));
         const filteredOrderItems = allOrderItems.filter(item => filteredOrderIds.has(item.orderId));
         
-        const allSchemeSkuIds = new Set(schemes.flatMap(s => [s.buySkuId, s.getSkuId]));
-
         const skuMap = new Map(skus.map(s => [s.id, s.name]));
         const distributorMap = new Map(distributors.map(d => [d.id, d.name]));
 
-        const schemeData: Record<string, any> = {};
-        let totalSchemePaidQty = 0;
-        let totalSchemeFreeQty = 0;
-        let totalNonSchemeQty = 0;
+        const distributorData: Record<string, any> = {};
+        let totalPaidQty = 0;
+        let totalFreeQty = 0;
         
         filteredOrderItems.forEach(item => {
             const order = orders.find(o => o.id === item.orderId);
@@ -130,26 +127,19 @@ const SalesPage: React.FC = () => {
             const skuName = skuMap.get(item.skuId);
             if (!skuName) return;
 
-            const isSchemeProduct = allSchemeSkuIds.has(item.skuId);
-
-            if (isSchemeProduct) {
-                if (!schemeData[distId]) schemeData[distId] = { amount: 0 };
-                if (item.isFreebie) {
-                    schemeData[distId][`${skuName} free`] = (schemeData[distId][`${skuName} free`] || 0) + item.quantity;
-                    totalSchemeFreeQty += item.quantity;
-                } else {
-                    schemeData[distId][skuName] = (schemeData[distId][skuName] || 0) + item.quantity;
-                    schemeData[distId].amount += item.quantity * item.unitPrice;
-                    totalSchemePaidQty += item.quantity;
-                }
+            if (!distributorData[distId]) distributorData[distId] = { amount: 0 };
+            
+            if (item.isFreebie) {
+                distributorData[distId][`${skuName} free`] = (distributorData[distId][`${skuName} free`] || 0) + item.quantity;
+                totalFreeQty += item.quantity;
             } else {
-                if (!item.isFreebie) {
-                    totalNonSchemeQty += item.quantity;
-                }
+                distributorData[distId][skuName] = (distributorData[distId][skuName] || 0) + item.quantity;
+                distributorData[distId].amount += item.quantity * item.unitPrice;
+                totalPaidQty += item.quantity;
             }
         });
         
-        const schemeSales = Object.entries(schemeData).map(([distId, data]) => ({
+        const distributorSales = Object.entries(distributorData).map(([distId, data]) => ({
             distributorName: distributorMap.get(distId) || 'Unknown',
             ...data
         })).sort((a,b) => a.distributorName.localeCompare(b.distributorName));
@@ -169,30 +159,44 @@ const SalesPage: React.FC = () => {
             totalQuantity
         })).sort((a, b) => b.totalQuantity - a.totalQuantity);
         
-        const schemeTotals: Record<string, any> = { amount: 0 };
-        schemeSales.forEach(sale => {
+        const salesTotals: Record<string, any> = { amount: 0 };
+        distributorSales.forEach(sale => {
             PRODUCT_ORDER.forEach(name => {
-                schemeTotals[name] = (schemeTotals[name] || 0) + (sale[name] || 0);
-                schemeTotals[`${name} free`] = (schemeTotals[`${name} free`] || 0) + (sale[`${name} free`] || 0);
+                salesTotals[name] = (salesTotals[name] || 0) + (sale[name] || 0);
+                salesTotals[`${name} free`] = (salesTotals[`${name} free`] || 0) + (sale[`${name} free`] || 0);
             });
-            schemeTotals.amount += sale.amount || 0;
+            salesTotals.amount += sale.amount || 0;
         });
+        
+        // --- Data for Charts ---
+        const salesByDate = new Map<string, number>();
+        filteredOrders.forEach(order => {
+            const dateStr = new Date(order.date).toLocaleDateString('en-CA'); // YYYY-MM-DD
+            salesByDate.set(dateStr, (salesByDate.get(dateStr) || 0) + order.totalAmount);
+        });
+        
+        const salesTrendData = Array.from(salesByDate.entries())
+            .map(([date, sales]) => ({ date, sales }))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            
+        const topProductsData = productSalesSummary.slice(0, 5).reverse();
 
-        return { totalSalesValue, schemeSales, totalSchemePaidQty, totalSchemeFreeQty, totalNonSchemeQty, productSalesSummary, schemeTotals, filteredOrders, filteredOrderItems };
-    }, [orders, allOrderItems, distributors, skus, schemes, dateRange, selectedDistributorId]);
+        return { totalSalesValue, distributorSales, totalPaidQty, totalFreeQty, productSalesSummary, salesTotals, filteredOrders, filteredOrderItems, salesTrendData, topProductsData };
+    }, [orders, allOrderItems, distributors, skus, dateRange, selectedDistributorId]);
     
     const handleExportCsv = () => {
         if (loading) return;
 
         const { filteredOrders, filteredOrderItems } = salesData;
 
-        const allSchemeSkuIds = new Set(schemes.flatMap(s => [s.buySkuId, s.getSkuId]));
-        const skuMap = new Map(skus.map(s => [s.id, s.name]));
+        // Use a map for the full SKU object to get name and base price
+        const skuMap = new Map(skus.map(s => [s.id, s]));
         const distributorMap = new Map(distributors.map(d => [d.id, d.name]));
 
         const headers = [
-            'Order ID', 'Order Date', 'Distributor Name', 'Sale Type', 
-            'Product Name', 'Item Type', 'Quantity', 'Unit Price', 'Total Amount'
+            'Order ID', 'Order Date', 'Distributor ID', 'Distributor Name',
+            'SKU ID', 'Product Name', 'Item Type', 'Quantity', 'Base Price',
+            'Unit Price', 'Total Amount'
         ];
 
         const escapeCsvCell = (cell: any): string => {
@@ -208,17 +212,20 @@ const SalesPage: React.FC = () => {
             if (!order) return null;
 
             const distributorName = distributorMap.get(order.distributorId) || 'Unknown';
-            const skuName = skuMap.get(item.skuId) || 'Unknown SKU';
-            const isSchemeProduct = allSchemeSkuIds.has(item.skuId);
+            const sku = skuMap.get(item.skuId);
+            const skuName = sku ? sku.name : 'Unknown SKU';
+            const basePrice = sku ? sku.price : 0;
 
             return [
                 order.id,
                 new Date(order.date).toLocaleDateString(),
+                order.distributorId,
                 distributorName,
-                isSchemeProduct ? 'Scheme' : 'Non-Scheme',
+                item.skuId,
                 skuName,
                 item.isFreebie ? 'Free' : 'Paid',
                 item.quantity,
+                basePrice,
                 item.unitPrice,
                 item.quantity * item.unitPrice
             ].map(escapeCsvCell);
@@ -271,13 +278,46 @@ const SalesPage: React.FC = () => {
                 </div>
             </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard title="Total Sales Value" value={`₹${salesData.totalSalesValue.toLocaleString()}`} icon={<DollarSign />} />
-                <StatCard title="Scheme: Paid Items" value={salesData.totalSchemePaidQty.toLocaleString()} icon={<Package />} />
-                <StatCard title="Scheme: Free Items" value={salesData.totalSchemeFreeQty.toLocaleString()} icon={<Gift />} />
-                <StatCard title="Non-Scheme Items" value={salesData.totalNonSchemeQty.toLocaleString()} icon={<TrendingUp />} />
+                <StatCard title="Total Paid Items" value={salesData.totalPaidQty.toLocaleString()} icon={<Package />} />
+                <StatCard title="Total Free Items" value={salesData.totalFreeQty.toLocaleString()} icon={<Gift />} />
             </div>
             
+            <Card>
+                <h3 className="text-lg font-semibold mb-4 text-text-primary">Sales Visualizations</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
+                    <div>
+                        <h4 className="font-semibold text-center text-text-secondary mb-2">Daily Sales Trend</h4>
+                        {salesData.salesTrendData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <LineChart data={salesData.salesTrendData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${Number(value)/1000}k`} />
+                                    <Tooltip formatter={(value) => [`₹${Number(value).toLocaleString()}`, 'Sales']} />
+                                    <Line type="monotone" dataKey="sales" stroke="#3B82F6" strokeWidth={2} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6, fill: '#3B82F6' }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        ) : <div className="flex items-center justify-center h-[300px] bg-background rounded-md text-text-secondary">No sales data for trend chart.</div>}
+                    </div>
+                     <div>
+                        <h4 className="font-semibold text-center text-text-secondary mb-2">Top 5 Selling Products (Paid)</h4>
+                         {salesData.topProductsData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <RechartsBarChart data={salesData.topProductsData} layout="vertical" margin={{ top: 5, right: 30, left: 50, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <XAxis type="number" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis type="category" dataKey="skuName" width={100} fontSize={12} tickLine={false} axisLine={false} />
+                                    <Tooltip formatter={(value) => [Number(value).toLocaleString(), 'Quantity']} cursor={{fill: '#f9fafb'}} />
+                                    <Bar dataKey="totalQuantity" fill="#3B82F6" barSize={20} />
+                                </RechartsBarChart>
+                            </ResponsiveContainer>
+                        ) : <div className="flex items-center justify-center h-[300px] bg-background rounded-md text-text-secondary">No product data for chart.</div>}
+                    </div>
+                </div>
+            </Card>
+
             <Card>
                 <h3 className="flex items-center text-lg font-semibold mb-4 text-text-primary">
                     <BarChart size={20} className="mr-2"/>
@@ -309,7 +349,7 @@ const SalesPage: React.FC = () => {
             </Card>
 
             <Card>
-                <h3 className="text-lg font-semibold mb-4 text-text-primary">Scheme Sales Details</h3>
+                <h3 className="text-lg font-semibold mb-4 text-text-primary">Distributor Sales Details</h3>
                 <div className="overflow-x-auto max-h-96">
                     <table className="w-full text-left min-w-[1200px]">
                         <thead className="bg-background sticky top-0">
@@ -325,7 +365,7 @@ const SalesPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {salesData.schemeSales.map((sale, index) => (
+                            {salesData.distributorSales.map((sale, index) => (
                                 <tr key={index} className="border-b border-border last:border-b-0 hover:bg-background">
                                     <td className="p-3 font-medium text-text-primary whitespace-nowrap">{sale.distributorName}</td>
                                     {PRODUCT_ORDER.map(name => (
@@ -343,17 +383,17 @@ const SalesPage: React.FC = () => {
                                 <td className="p-3 whitespace-nowrap">Total</td>
                                 {PRODUCT_ORDER.map(name => (
                                     <React.Fragment key={name}>
-                                        <td className="p-3 text-center whitespace-nowrap">{salesData.schemeTotals[name]?.toLocaleString() || '0'}</td>
-                                        <td className="p-3 text-center whitespace-nowrap bg-green-50 text-green-700">{salesData.schemeTotals[`${name} free`]?.toLocaleString() || '0'}</td>
+                                        <td className="p-3 text-center whitespace-nowrap">{salesData.salesTotals[name]?.toLocaleString() || '0'}</td>
+                                        <td className="p-3 text-center whitespace-nowrap bg-green-50 text-green-700">{salesData.salesTotals[`${name} free`]?.toLocaleString() || '0'}</td>
                                     </React.Fragment>
                                 ))}
-                                <td className="p-3 text-right whitespace-nowrap">₹{salesData.schemeTotals.amount.toLocaleString()}</td>
+                                <td className="p-3 text-right whitespace-nowrap">₹{salesData.salesTotals.amount.toLocaleString()}</td>
                             </tr>
                         </tfoot>
                     </table>
-                    {salesData.schemeSales.length === 0 && (
+                    {salesData.distributorSales.length === 0 && (
                         <div className="text-center p-6 text-text-secondary">
-                            <p>No scheme-based sales recorded for the selected period and filter.</p>
+                            <p>No sales recorded for the selected period and filter.</p>
                         </div>
                     )}
                 </div>
