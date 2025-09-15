@@ -6,7 +6,8 @@ import Select from './common/Select';
 import Button from './common/Button';
 import { useAuth } from '../hooks/useAuth';
 import { PlusCircle, Trash2, CheckCircle, XCircle, Gift, Star, FileText } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+// FIX: Use namespace import for react-router-dom to resolve export errors.
+import * as ReactRouterDOM from 'react-router-dom';
 import { formatIndianCurrency } from '../utils/formatting';
 import Input from './common/Input';
 
@@ -34,7 +35,7 @@ interface StatusMessage {
 
 const PlaceOrder: React.FC = () => {
   const { currentUser } = useAuth();
-  const location = useLocation();
+  const location = ReactRouterDOM.useLocation();
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [skus, setSkus] = useState<SKU[]>([]);
   const [globalSchemes, setGlobalSchemes] = useState<Scheme[]>([]);
@@ -272,15 +273,9 @@ const PlaceOrder: React.FC = () => {
             {distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </Select>
           {selectedDistributor && (
-            <div className="bg-slate-50 border border-border rounded-lg p-4">
-                <div>
-                    <p className="text-xs text-text-secondary">Wallet Balance</p>
-                    <p className="text-lg font-bold text-text-primary">{formatIndianCurrency(selectedDistributor.walletBalance)}</p>
-                </div>
-                <div className="col-span-2 mt-2 pt-2 border-t border-border">
-                    <p className="text-sm font-semibold text-text-secondary text-center">Total Available for Order</p>
-                    <p className="text-xl font-bold text-text-primary text-center">{formatIndianCurrency(totalAvailableForOrder)}</p>
-                </div>
+            <div className="bg-primary-lightest border border-primary/20 rounded-lg p-4 text-center">
+                <p className="text-sm font-semibold text-text-secondary">Available Wallet Balance</p>
+                <p className="text-2xl font-bold text-text-primary mt-1">{formatIndianCurrency(totalAvailableForOrder)}</p>
             </div>
           )}
         </div>
@@ -325,11 +320,11 @@ const PlaceOrder: React.FC = () => {
                   </thead>
                   <tbody>
                     {displayItems.map((item, index) => (
-                      <tr key={index} className={`border-b border-border last:border-b-0 ${item.isFreebie ? 'bg-green-50' : ''}`}>
+                      <tr key={index} className={`border-b border-border last:border-b-0 ${item.isFreebie ? 'bg-green-100/50' : ''}`}>
                         <td className="p-2 w-1/2">
                           {item.skuName}
-                          {item.isFreebie && <Gift size={12} className="inline ml-2 text-green-600"/>}
-                          {item.hasSpecialPrice && <Star size={12} className="inline ml-2 text-yellow-500"/>}
+                          {item.isFreebie && <Gift size={12} className="inline ml-2 text-green-700"/>}
+                          {item.hasSpecialPrice && <Star size={12} className="inline ml-2 text-yellow-700"/>}
                         </td>
                         <td className="p-2 text-center">{item.quantity}</td>
                         <td className="p-2 text-right">{formatIndianCurrency(item.unitPrice)}</td>
@@ -345,7 +340,7 @@ const PlaceOrder: React.FC = () => {
                   </tfoot>
                 </table>
               </div>
-               <p className="text-sm text-red-500 text-right mt-2">{subtotal > totalAvailableForOrder ? "Order exceeds available balance!" : ""}</p>
+               <p className="text-sm text-red-700 text-right mt-2">{subtotal > totalAvailableForOrder ? "Order exceeds available balance!" : ""}</p>
             </div>
           )}
         </Card>

@@ -1,8 +1,10 @@
 import React from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+// FIX: Use namespace import for react-router-dom to resolve export errors.
+import * as ReactRouterDOM from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
+import BentoPage from './components/BentoPage';
 import DistributorOnboarding from './components/DistributorOnboarding';
 import PlaceOrder from './components/PlaceOrder';
 import RechargeWallet from './components/RechargeWallet';
@@ -23,12 +25,12 @@ import SettingsPage from './components/SettingsPage';
 function App() {
   return (
     <AuthProvider>
-      <HashRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/*" element={<ProtectedApp />} />
-        </Routes>
-      </HashRouter>
+      <ReactRouterDOM.HashRouter>
+        <ReactRouterDOM.Routes>
+          <ReactRouterDOM.Route path="/login" element={<LoginPage />} />
+          <ReactRouterDOM.Route path="/*" element={<ProtectedApp />} />
+        </ReactRouterDOM.Routes>
+      </ReactRouterDOM.HashRouter>
     </AuthProvider>
   );
 }
@@ -37,35 +39,36 @@ function ProtectedApp() {
   const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <ReactRouterDOM.Navigate to="/login" replace />;
   }
 
   return (
-    <Routes>
+    <ReactRouterDOM.Routes>
       {/* Routes that need the main layout */}
-      <Route element={<Layout />}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="add-distributor" element={<DistributorOnboarding />} />
-        <Route path="place-order" element={<PlaceOrder />} />
-        <Route path="recharge-wallet" element={<RechargeWallet />} />
-        <Route path="orders" element={<OrderHistory />} />
-        <Route path="sales" element={<SalesPage />} />
-        <Route path="distributors/:distributorId" element={<DistributorDetailsPage />} />
-        <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="manage-skus" element={<ManageSKUs />} />
-        <Route path="manage-schemes" element={<ManageSchemes />} />
-        <Route path="special-assignments" element={<SpecialAssignmentsPage />} />
-        <Route path="distributor-scorecard" element={<DistributorScorecardPage />} />
-        <Route path="ceo-insights" element={<CEOInsightsPage />} />
-        <Route path="user-management" element={<UserManagement />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Route>
+      <ReactRouterDOM.Route element={<Layout />}>
+        <ReactRouterDOM.Route index element={<ReactRouterDOM.Navigate to="/bento-dashboard" replace />} />
+        <ReactRouterDOM.Route path="bento-dashboard" element={<BentoPage />} />
+        <ReactRouterDOM.Route path="dashboard" element={<Dashboard />} />
+        <ReactRouterDOM.Route path="add-distributor" element={<DistributorOnboarding />} />
+        <ReactRouterDOM.Route path="place-order" element={<PlaceOrder />} />
+        <ReactRouterDOM.Route path="recharge-wallet" element={<RechargeWallet />} />
+        <ReactRouterDOM.Route path="orders" element={<OrderHistory />} />
+        <ReactRouterDOM.Route path="sales" element={<SalesPage />} />
+        <ReactRouterDOM.Route path="distributors/:distributorId" element={<DistributorDetailsPage />} />
+        <ReactRouterDOM.Route path="notifications" element={<NotificationsPage />} />
+        <ReactRouterDOM.Route path="manage-skus" element={<ManageSKUs />} />
+        <ReactRouterDOM.Route path="manage-schemes" element={<ManageSchemes />} />
+        <ReactRouterDOM.Route path="special-assignments" element={<SpecialAssignmentsPage />} />
+        <ReactRouterDOM.Route path="distributor-scorecard" element={<DistributorScorecardPage />} />
+        <ReactRouterDOM.Route path="ceo-insights" element={<CEOInsightsPage />} />
+        <ReactRouterDOM.Route path="user-management" element={<UserManagement />} />
+        <ReactRouterDOM.Route path="settings" element={<SettingsPage />} />
+        <ReactRouterDOM.Route path="*" element={<ReactRouterDOM.Navigate to="/bento-dashboard" replace />} />
+      </ReactRouterDOM.Route>
       
       {/* Standalone routes that do not use the main layout */}
-      <Route path="invoice/:orderId" element={<Invoice />} />
-    </Routes>
+      <ReactRouterDOM.Route path="invoice/:orderId" element={<Invoice />} />
+    </ReactRouterDOM.Routes>
   );
 }
 

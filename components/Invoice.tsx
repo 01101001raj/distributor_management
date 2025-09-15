@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+// FIX: Use namespace import for react-router-dom to resolve export errors.
+import * as ReactRouterDOM from 'react-router-dom';
 import { api } from '../services/mockApiService';
 import { InvoiceData, CompanyDetails } from '../types';
 import Button from './common/Button';
@@ -11,8 +12,8 @@ import html2canvas from 'html2canvas';
 const COMPANY_DETAILS_KEY = 'companyDetails';
 
 const Invoice: React.FC = () => {
-    const { orderId } = useParams<{ orderId: string }>();
-    const location = useLocation();
+    const { orderId } = ReactRouterDOM.useParams<{ orderId: string }>();
+    const location = ReactRouterDOM.useLocation();
     const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
     const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null);
     const [loading, setLoading] = useState(true);

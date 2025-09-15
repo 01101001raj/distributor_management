@@ -2,9 +2,8 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Card from './common/Card';
 import Button from './common/Button';
 import { api } from '../services/mockApiService';
-import { Order, Distributor, EnrichedOrderItem, OrderStatus } from '../types';
-import { ChevronDown, ChevronRight, Gift, Edit, CheckCircle, XCircle, Search, Download } from 'lucide-react';
-import EditOrderModal from './EditOrderModal';
+import { Order, Distributor, EnrichedOrderItem, OrderStatus, SKU } from '../types';
+import { ChevronDown, ChevronRight, Gift, Edit, CheckCircle, XCircle, Search, Download, Trash2, PlusCircle, Save } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import Input from './common/Input';
 import Select from './common/Select';
@@ -15,9 +14,9 @@ import SortableTableHeader from './common/SortableTableHeader';
 const OrderHistory: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [distributors, setDistributors] = useState<Distributor[]>([]);
+  const [skus, setSkus] = useState<SKU[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,12 +28,14 @@ const OrderHistory: React.FC = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [orderData, distributorData] = await Promise.all([
+      const [orderData, distributorData, skuData] = await Promise.all([
         api.getOrders(),
         api.getDistributors(),
+        api.getSKUs(),
       ]);
       setOrders(orderData);
       setDistributors(distributorData);
+      setSkus(skuData);
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
@@ -75,8 +76,6 @@ const OrderHistory: React.FC = () => {
   };
   
   const handleDownloadInvoice = (orderId: string) => {
-    // This opens a new window which will auto-download and then close itself.
-    // The window is opened off-screen to be less intrusive.
     window.open(`/#/invoice/${orderId}?download=true`, '_blank', 'width=1,height=1,left=9999,top=9999');
   };
 
@@ -103,9 +102,9 @@ const OrderHistory: React.FC = () => {
   const getStatusChip = (status: OrderStatus) => {
       const baseClasses = "px-2.5 py-1 text-xs font-semibold rounded-full inline-block";
       if (status === OrderStatus.DELIVERED) {
-          return <span className={`${baseClasses} bg-green-100 text-green-700`}>{status}</span>;
+          return <span className={`${baseClasses} bg-green-100 text-green-800`}>{status}</span>;
       }
-      return <span className={`${baseClasses} bg-yellow-100 text-yellow-700`}>{status}</span>;
+      return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>{status}</span>;
   }
   
   return (
@@ -144,8 +143,8 @@ const OrderHistory: React.FC = () => {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[700px] text-sm">
-            <thead className="bg-slate-50">
-              <tr>
+            <thead>
+              <tr className="border-b border-border">
                 <th className="p-3 w-12"></th>
                 <SortableTableHeader label="Order ID" sortKey="id" requestSort={requestSort} sortConfig={sortConfig} />
                 <SortableTableHeader label="Distributor" sortKey="distributorName" requestSort={requestSort} sortConfig={sortConfig} />
@@ -178,8 +177,7 @@ const OrderHistory: React.FC = () => {
                     <td className="p-3">
                         {order.status === OrderStatus.PENDING && (
                             <div className="flex gap-2">
-                                <Button size="sm" variant="secondary" onClick={() => setEditingOrder(order)} disabled={!!updatingOrderId}><Edit size={14}/> Edit</Button>
-                                <Button size="sm" variant="primary" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleMarkDelivered(order.id)} isLoading={updatingOrderId === order.id} disabled={!!updatingOrderId}><CheckCircle size={14}/> Deliver</Button>
+                                <Button size="sm" variant="primary" className="bg-green-500 hover:bg-green-600 text-white" onClick={() => handleMarkDelivered(order.id)} isLoading={updatingOrderId === order.id} disabled={!!updatingOrderId}><CheckCircle size={14}/> Deliver</Button>
                             </div>
                         )}
                     </td>
@@ -188,7 +186,16 @@ const OrderHistory: React.FC = () => {
                     <tr className="bg-slate-50">
                       <td colSpan={8} className="p-0">
                         <div className="p-4">
-                          <OrderDetails orderId={order.id} />
+                           <OrderDetails 
+                                order={order} 
+                                skus={skus}
+                                onUpdate={() => {
+                                    fetchData();
+                                    setExpandedOrderId(null);
+                                }} 
+                                onCancel={() => setExpandedOrderId(null)}
+                                setStatusMessage={setStatusMessage}
+                            />
                         </div>
                       </td>
                     </tr>
@@ -206,60 +213,168 @@ const OrderHistory: React.FC = () => {
           )}
         </div>
       </Card>
-      {editingOrder && (
-          <EditOrderModal
-              order={editingOrder}
-              onClose={() => setEditingOrder(null)}
-              onSave={() => {
-                  setEditingOrder(null);
-                  fetchData(); // Refetch all data to reflect changes
-              }}
-          />
-      )}
     </>
   );
 };
 
-const OrderDetails: React.FC<{ orderId: string }> = ({ orderId }) => {
-    const [items, setItems] = useState<EnrichedOrderItem[]>([]);
+interface EditableItem {
+  id: string; // Unique client-side ID for list keys
+  skuId: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+const OrderDetails: React.FC<{ order: Order; skus: SKU[]; onUpdate: () => void; onCancel: () => void; setStatusMessage: (msg: { type: 'success'|'error', text: string } | null) => void; }> = ({ order, skus, onUpdate, onCancel, setStatusMessage }) => {
+    const [initialItems, setInitialItems] = useState<EnrichedOrderItem[]>([]);
+    const [editableItems, setEditableItems] = useState<EditableItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const { currentUser } = useAuth();
 
     useEffect(() => {
-        api.getOrderItems(orderId).then(data => {
-            setItems(data);
+        const fetchItems = async () => {
+            setLoading(true);
+            const data = await api.getOrderItems(order.id);
+            setInitialItems(data);
+            const editable = data
+                .filter(item => !item.isFreebie)
+                .map(item => ({
+                    id: `${item.skuId}-${Math.random()}`,
+                    skuId: item.skuId,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice
+                }));
+            setEditableItems(editable);
             setLoading(false);
-        });
-    }, [orderId]);
+        };
+        fetchItems();
+    }, [order.id]);
 
-    if (loading) return <div className="p-2 text-sm">Loading items...</div>
+    const { newSubtotal, freebies } = useMemo(() => {
+        let subtotal = 0;
+        const calculatedFreebies: { skuName: string, quantity: number }[] = [];
+        subtotal = editableItems.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
+        return { newSubtotal: subtotal, freebies: calculatedFreebies };
+    }, [editableItems]);
 
-    return (
-        <div className="bg-card p-4 rounded-lg border border-border">
+    const handleItemChange = (itemId: string, field: 'skuId' | 'quantity' | 'unitPrice', value: string) => {
+        setEditableItems(prev => prev.map(item => {
+            if (item.id === itemId) {
+                if(field === 'skuId') return { ...item, [field]: value };
+                return { ...item, [field]: Number(value) >= 0 ? Number(value) : 0 };
+            }
+            return item;
+        }));
+    };
+    
+    const handleAddItem = () => {
+        if (skus.length > 0) {
+            const firstSku = skus[0];
+            setEditableItems(prev => [...prev, {
+                id: `new-${Date.now()}`,
+                skuId: firstSku.id,
+                quantity: 1,
+                unitPrice: firstSku.price,
+            }]);
+        }
+    };
+
+    const handleRemoveItem = (itemId: string) => {
+        setEditableItems(prev => prev.filter(item => item.id !== itemId));
+    };
+    
+    const handleSaveChanges = async () => {
+        if (!currentUser) return;
+        setLoading(true);
+        try {
+            const itemsToSubmit = editableItems
+                .filter(item => item.quantity > 0)
+                .map(({ skuId, quantity, unitPrice }) => ({ skuId, quantity, unitPrice }));
+            
+            await api.updateOrderItems(order.id, itemsToSubmit, currentUser.username);
+            setStatusMessage({ type: 'success', text: `Order ${order.id} updated successfully.`});
+            onUpdate();
+        } catch (error) {
+            setStatusMessage({ type: 'error', text: `Failed to update order: ${(error as Error).message}` });
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    if (loading) return <div className="p-2 text-sm">Loading items...</div>;
+
+    const renderReadOnlyView = () => (
+        <div className="bg-slate-100 p-4 rounded-lg border border-border">
             <h4 className="font-bold mb-2 text-text-primary">Order Items</h4>
-            <div className="overflow-x-auto">
-                <table className="w-full bg-white rounded-md min-w-[400px] text-sm">
-                    <thead>
-                        <tr className="text-left border-b border-border">
-                            <th className="p-2 font-semibold text-text-secondary">Product</th>
-                            <th className="p-2 font-semibold text-text-secondary text-center">Quantity</th>
-                            <th className="p-2 font-semibold text-text-secondary text-right">Unit Price</th>
-                            <th className="p-2 font-semibold text-text-secondary text-right">Subtotal</th>
+            <table className="w-full bg-white rounded-md min-w-[400px] text-sm">
+                <thead>
+                    <tr className="text-left border-b border-border">
+                        <th className="p-2 font-semibold text-text-secondary">Product</th>
+                        <th className="p-2 font-semibold text-text-secondary text-center">Quantity</th>
+                        <th className="p-2 font-semibold text-text-secondary text-right">Unit Price</th>
+                        <th className="p-2 font-semibold text-text-secondary text-right">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {initialItems.map((item, index) => (
+                        <tr key={index} className={`border-b border-border last:border-none ${item.isFreebie ? 'bg-green-100/50' : ''}`}>
+                            <td className="p-2">{item.skuName} {item.isFreebie && <Gift size={12} className="inline ml-1 text-green-700"/>}</td>
+                            <td className="p-2 text-center">{item.quantity}</td>
+                            <td className="p-2 text-right">{formatIndianCurrency(item.unitPrice)}</td>
+                            <td className="p-2 font-semibold text-right">{formatIndianCurrency(item.quantity * item.unitPrice)}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+    
+    if (order.status !== OrderStatus.PENDING) {
+        return renderReadOnlyView();
+    }
+    
+    return (
+        <div className="bg-slate-100 p-4 rounded-lg border border-primary/20">
+             <h4 className="font-bold mb-2 text-text-primary">Edit Order Items</h4>
+             <div className="overflow-x-auto">
+                <table className="w-full bg-white rounded-md min-w-[600px] text-sm">
+                     <thead className="bg-slate-200">
+                        <tr className="text-left">
+                            <th className="p-2 font-semibold text-text-secondary w-2/5">Product</th>
+                            <th className="p-2 font-semibold text-text-secondary w-1/5 text-center">Quantity</th>
+                            <th className="p-2 font-semibold text-text-secondary w-1/5 text-right">Unit Price</th>
+                            <th className="p-2 font-semibold text-text-secondary w-1/5 text-right">Subtotal</th>
+                            <th className="p-2"></th>
                         </tr>
                     </thead>
                     <tbody>
-                        {items.map((item, index) => (
-                            <tr key={index} className={`border-b border-border last:border-none ${item.isFreebie ? 'bg-green-50' : ''}`}>
-                                <td className="p-2">{item.skuName} {item.isFreebie && <Gift size={12} className="inline ml-1 text-green-700"/>}</td>
-                                <td className="p-2 text-center">{item.quantity}</td>
-                                <td className="p-2 text-right">{formatIndianCurrency(item.unitPrice)}</td>
-                                <td className="p-2 font-semibold text-right">{formatIndianCurrency(item.quantity * item.unitPrice)}</td>
-                            </tr>
+                        {editableItems.map(item => (
+                             <tr key={item.id}>
+                                <td>
+                                    <Select value={item.skuId} onChange={(e) => handleItemChange(item.id, 'skuId', e.target.value)}>
+                                        {skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </Select>
+                                </td>
+                                <td><Input type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} /></td>
+                                <td><Input type="number" value={item.unitPrice} onChange={(e) => handleItemChange(item.id, 'unitPrice', e.target.value)} /></td>
+                                <td className="p-2 text-right font-semibold">{formatIndianCurrency(item.quantity * item.unitPrice)}</td>
+                                <td><Button size="sm" variant="danger" className="p-2" onClick={() => handleRemoveItem(item.id)}><Trash2 size={14} /></Button></td>
+                             </tr>
                         ))}
                     </tbody>
                 </table>
-            </div>
+             </div>
+              <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <Button size="sm" variant="secondary" onClick={handleAddItem}><PlusCircle size={14}/> Add Item</Button>
+                <div className="text-right font-bold">
+                    New Total: {formatIndianCurrency(newSubtotal)}
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-2 border-t pt-4">
+                  <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+                  <Button onClick={handleSaveChanges} isLoading={loading}><Save size={14}/> Save Changes</Button>
+              </div>
         </div>
-    );
+    )
 };
 
 export default OrderHistory;

@@ -6,7 +6,8 @@ import Button from './common/Button';
 import { api } from '../services/mockApiService';
 import { useAuth } from '../hooks/useAuth';
 import { FileUp, CheckCircle, XCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+// FIX: Use namespace import for react-router-dom to resolve export errors.
+import * as ReactRouterDOM from 'react-router-dom';
 
 interface FormInputs {
   name: string;
@@ -15,7 +16,6 @@ interface FormInputs {
   area: string;
   hasSpecialPricing: boolean;
   hasSpecialSchemes: boolean;
-  agreementFile: FileList;
 }
 
 const DistributorOnboarding: React.FC = () => {
@@ -32,15 +32,13 @@ const DistributorOnboarding: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [fileName, setFileName] = useState('');
   const { currentUser } = useAuth();
-  const navigate = useNavigate();
+  const navigate = ReactRouterDOM.useNavigate();
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     setIsLoading(true);
     setStatusMessage(null);
     try {
-      const agreementFile = data.agreementFile.length > 0 ? data.agreementFile[0] : null;
       const newDistributor = await api.addDistributor({
         name: data.name,
         phone: data.phone,
@@ -48,12 +46,10 @@ const DistributorOnboarding: React.FC = () => {
         area: data.area,
         hasSpecialPricing: data.hasSpecialPricing,
         hasSpecialSchemes: data.hasSpecialSchemes,
-        agreementFile,
         addedByExecId: currentUser!.username,
       });
       setStatusMessage({ type: 'success', text: `Distributor "${data.name}" added successfully! You will be redirected to their details page.` });
       reset();
-      setFileName('');
       setTimeout(() => {
         navigate(`/distributors/${newDistributor.id}`);
       }, 2000);
@@ -74,16 +70,17 @@ const DistributorOnboarding: React.FC = () => {
   }
 
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card className="max-w-3xl mx-auto">
       <h2 className="text-2xl font-bold mb-6 text-text-primary">New Distributor Onboarding</h2>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <Input
-          id="name"
-          label="Distributor Name (Firm Name)"
-          {...register('name', { required: 'Name is required' })}
-          error={errors.name?.message}
-        />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Input
+            id="name"
+            label="Distributor Name (Firm Name)"
+            {...register('name', { required: 'Name is required' })}
+            error={errors.name?.message}
+            className="md:col-span-2"
+          />
           <Input
             id="phone"
             label="Phone Number"
@@ -100,8 +97,6 @@ const DistributorOnboarding: React.FC = () => {
             {...register('state', { required: 'State is required' })}
             error={errors.state?.message}
           />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
          <Input
             id="area"
             label="Area Name"
@@ -109,7 +104,7 @@ const DistributorOnboarding: React.FC = () => {
             error={errors.area?.message}
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 pt-2">
             <h3 className="text-sm font-medium text-text-secondary">Special Conditions</h3>
             <div className="flex items-center space-x-8">
                  <label className="flex items-center space-x-2 cursor-pointer text-sm">
@@ -123,19 +118,8 @@ const DistributorOnboarding: React.FC = () => {
             </div>
         </div>
 
-        <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1">
-                Agreement Upload
-            </label>
-            <label htmlFor="agreementFile" className="relative cursor-pointer bg-white rounded-md border border-border hover:border-primary p-2 flex items-center justify-center">
-                 <FileUp className="w-5 h-5 text-text-secondary mr-2" />
-                 <span className="text-sm text-text-secondary">{fileName || 'Click to upload a file'}</span>
-                 <input id="agreementFile" type="file" {...register('agreementFile')} onChange={(e) => setFileName(e.target.files?.[0]?.name || '')} className="sr-only"/>
-            </label>
-        </div>
-        
-        <div className="pt-4">
-            <Button type="submit" isLoading={isLoading} className="w-full" disabled={!isValid}>
+        <div className="pt-4 flex justify-end">
+            <Button type="submit" isLoading={isLoading} disabled={!isValid}>
                 Add Distributor
             </Button>
         </div>

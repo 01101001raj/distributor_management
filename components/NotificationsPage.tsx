@@ -8,7 +8,7 @@ import { Bell, Wallet, Package, Sparkles, UserPlus, XCircle, Check } from 'lucid
 const NOTIFICATION_ICONS: Record<NotificationType, React.ReactElement> = {
     [NotificationType.WALLET_LOW]: <Wallet className="text-text-secondary" />,
     [NotificationType.ORDER_PLACED]: <Package className="text-text-secondary" />,
-    [NotificationType.ORDER_FAILED]: <XCircle className="text-red-500" />,
+    [NotificationType.ORDER_FAILED]: <XCircle className="text-red-700" />,
     [NotificationType.NEW_SCHEME]: <Sparkles className="text-text-secondary" />,
     [NotificationType.DISTRIBUTOR_ADDED]: <UserPlus className="text-text-secondary" />,
 };
@@ -66,9 +66,9 @@ const NotificationsPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h2 className="text-2xl font-bold">Notifications</h2>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
-                     <div className="flex gap-1 p-1 bg-background rounded-lg border border-border">
-                        <Button variant={filter === 'all' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('all')} className={`w-1/2 ${filter !== 'all' ? '!bg-transparent border-none shadow-none !text-text-secondary hover:!bg-slate-200' : 'shadow'}`}>All</Button>
-                        <Button variant={filter === 'unread' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('unread')} className={`w-1/2 ${filter !== 'unread' ? '!bg-transparent border-none shadow-none !text-text-secondary hover:!bg-slate-200' : 'shadow'}`}>Unread</Button>
+                     <div className="flex p-1 bg-slate-100 rounded-lg">
+                        <button onClick={() => setFilter('all')} className={`flex-1 px-4 py-1 text-sm rounded-md transition-colors font-semibold ${filter === 'all' ? 'bg-white text-primary shadow-sm' : 'text-text-secondary hover:bg-slate-200'}`}>All</button>
+                        <button onClick={() => setFilter('unread')} className={`flex-1 px-4 py-1 text-sm rounded-md transition-colors font-semibold ${filter === 'unread' ? 'bg-white text-primary shadow-sm' : 'text-text-secondary hover:bg-slate-200'}`}>Unread</button>
                     </div>
                     <Button onClick={handleMarkAllAsRead} variant="secondary" size="sm" disabled={notifications.every(n => n.isRead)}>
                         <Check size={14}/> Mark all as read
@@ -80,7 +80,7 @@ const NotificationsPage: React.FC = () => {
             ) : (
                 <div className="space-y-3">
                     {filteredNotifications.length > 0 ? filteredNotifications.map(notification => (
-                        <div key={notification.id} className={`flex items-start p-4 rounded-lg transition-colors ${notification.isRead ? 'bg-background' : 'bg-white border-2 border-primary/20'}`}>
+                        <div key={notification.id} className={`flex items-start p-4 rounded-lg transition-colors ${notification.isRead ? 'bg-background' : 'bg-primary-lightest'}`}>
                             <div className="flex-shrink-0 mr-4 mt-1">
                                 {NOTIFICATION_ICONS[notification.type]}
                             </div>

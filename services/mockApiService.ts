@@ -328,13 +328,13 @@ class ApiService {
   // --- Distributors ---
   getDistributors = () => simulateNetwork(store.distributors);
   getDistributorById = (id: string) => simulateNetwork(store.distributors.find(d => d.id === id) || null);
-  async addDistributor(data: Omit<Distributor, 'id' | 'walletBalance' | 'dateAdded'> & { agreementFile: File | null }): Promise<Distributor> {
+  async addDistributor(data: Omit<Distributor, 'id' | 'walletBalance' | 'dateAdded' | 'agreementUrl'>): Promise<Distributor> {
     const newDistributor: Distributor = {
         ...data,
         id: generateId('dist-'),
         walletBalance: 0,
         dateAdded: new Date().toISOString(),
-        agreementUrl: data.agreementFile ? URL.createObjectURL(data.agreementFile) : undefined,
+        agreementUrl: undefined,
     };
     store.distributors.push(newDistributor);
     this.addNotification(NotificationType.DISTRIBUTOR_ADDED, `New distributor added: ${newDistributor.name}`);
@@ -544,7 +544,7 @@ class ApiService {
       return simulateNetwork(order);
   }
   
-  async updateOrderItems(orderId: string, items: { skuId: string, quantity: number }[], updatedBy: string): Promise<Order> {
+  async updateOrderItems(orderId: string, items: { skuId: string, quantity: number, unitPrice: number }[], updatedBy: string): Promise<Order> {
     const order = store.orders.find(o => o.id === orderId);
     const distributor = store.distributors.find(d => d.id === order?.distributorId);
     if (!order || !distributor) throw new Error("Order or distributor not found");
@@ -555,7 +555,6 @@ class ApiService {
     store.orderItems = store.orderItems.filter(i => i.orderId !== orderId);
     
     const today = new Date().toISOString().split('T')[0];
-    const activePrices = store.specialPrices.filter(p => p.distributorId === distributor.id && p.startDate <= today && p.endDate >= today);
     const distributorSchemes = store.schemes.filter(s => s.distributorId === distributor.id && !s.isGlobal && s.startDate <= today && s.endDate >= today);
     const globalSchemes = store.schemes.filter(s => s.isGlobal && s.startDate <= today && s.endDate >= today);
     const applicableSchemes = distributorSchemes.length > 0 ? distributorSchemes : globalSchemes;
@@ -565,12 +564,8 @@ class ApiService {
     const freebies = new Map<string, number>();
 
     items.forEach(item => {
-        const sku = store.skus.find(s => s.id === item.skuId);
-        if (!sku) return;
-        const specialPrice = activePrices.find(p => p.skuId === item.skuId);
-        const unitPrice = specialPrice ? specialPrice.price : sku.price;
-        newSubtotal += item.quantity * unitPrice;
-        finalOrderItems.push({ orderId, skuId: item.skuId, quantity: item.quantity, freeQuantity: 0, unitPrice, isFreebie: false });
+        newSubtotal += item.quantity * item.unitPrice;
+        finalOrderItems.push({ orderId, skuId: item.skuId, quantity: item.quantity, freeQuantity: 0, unitPrice: item.unitPrice, isFreebie: false });
     });
     
     applicableSchemes.forEach(scheme => {

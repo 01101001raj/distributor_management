@@ -8,7 +8,8 @@ import { Distributor } from '../types';
 import { api } from '../services/mockApiService';
 import { useAuth } from '../hooks/useAuth';
 import { CheckCircle, XCircle } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+// FIX: Use namespace import for react-router-dom to resolve export errors.
+import * as ReactRouterDOM from 'react-router-dom';
 import { formatIndianCurrency } from '../utils/formatting';
 
 interface FormInputs {
@@ -18,7 +19,7 @@ interface FormInputs {
 }
 
 const RechargeWallet: React.FC = () => {
-  const location = useLocation();
+  const location = ReactRouterDOM.useLocation();
   const { register, handleSubmit, formState: { errors, isValid }, watch, reset } = useForm<FormInputs>({
     mode: 'onBlur',
     defaultValues: {
@@ -112,8 +113,8 @@ const RechargeWallet: React.FC = () => {
           <option value="Bank Transfer">Bank Transfer</option>
         </Select>
         
-        <div className="pt-4">
-            <Button type="submit" isLoading={isLoading} className="w-full" disabled={!isValid}>
+        <div className="pt-4 flex justify-end">
+            <Button type="submit" isLoading={isLoading} disabled={!isValid}>
                 Recharge Wallet
             </Button>
         </div>

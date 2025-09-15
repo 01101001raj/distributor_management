@@ -10,7 +10,7 @@ const Input: React.FC<InputProps> = ({ label, id, error, icon, ...props }) => {
   return (
     <div className="w-full">
       {label && (
-        <label htmlFor={id} className="block text-sm font-medium text-text-secondary mb-1">
+        <label htmlFor={id} className="block text-sm font-medium text-text-secondary mb-1.5">
           {label}
         </label>
       )}
@@ -22,11 +22,11 @@ const Input: React.FC<InputProps> = ({ label, id, error, icon, ...props }) => {
         )}
         <input
           id={id}
-          className={`w-full py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 transition bg-white text-sm text-text-primary ${icon ? 'pl-10' : 'px-3'} ${error ? 'border-red-500 focus:ring-red-500/50' : 'border-border focus:border-primary'}`}
+          className={`w-full px-3 py-2 border rounded-md focus-visible:outline-none focus-visible:ring-2 transition text-sm text-text-primary bg-input-bg ${icon ? 'pl-10' : ''} ${error ? 'border-red-500' : 'border-border focus:border-primary'}`}
           {...props}
         />
       </div>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
     </div>
   );
 };

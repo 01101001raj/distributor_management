@@ -5,7 +5,7 @@ import { LayoutDashboard, UserPlus, ShoppingCart, Wallet, ListOrdered, Boxes, Be
 export const ROLES = [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE, UserRole.USER];
 
 export const NAVIGATION_ITEMS = [
-  { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE, UserRole.USER] },
+  { path: '/bento-dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE, UserRole.USER] },
   { path: '/orders', label: 'Order History', icon: <ListOrdered size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE, UserRole.USER] },
   { path: '/sales', label: 'Sales', icon: <TrendingUp size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE, UserRole.USER] },
   { path: '/notifications', label: 'Notifications', icon: <Bell size={20} />, roles: [UserRole.SUPER_ADMIN, UserRole.EXECUTIVE, UserRole.USER] },

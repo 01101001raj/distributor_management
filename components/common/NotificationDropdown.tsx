@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../services/mockApiService';
 import { Notification } from '../../types';
 import { Bell } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+// FIX: Use namespace import for react-router-dom to resolve export errors.
+import * as ReactRouterDOM from 'react-router-dom';
 
 const NotificationDropdown: React.FC = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
 
     useEffect(() => {
         const fetchNotifications = async () => {

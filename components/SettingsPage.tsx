@@ -38,31 +38,34 @@ const SettingsPage: React.FC = () => {
     };
 
     return (
-        <Card className="max-w-2xl mx-auto">
+        <Card className="max-w-3xl mx-auto">
             <h2 className="text-2xl font-bold mb-6 text-text-primary">Company Settings</h2>
             <p className="text-sm text-text-secondary mb-6">
                 The information entered here will be used on all generated invoices.
             </p>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                <Input
-                    id="companyName"
-                    label="Company Name"
-                    {...register('companyName', { required: 'Company name is required' })}
-                    error={errors.companyName?.message}
-                />
-                <Input
-                    id="addressLine1"
-                    label="Address Line 1"
-                    {...register('addressLine1', { required: 'Address is required' })}
-                    error={errors.addressLine1?.message}
-                />
-                 <Input
-                    id="addressLine2"
-                    label="Address Line 2 (City, State, PIN)"
-                    {...register('addressLine2', { required: 'City, State, and PIN are required' })}
-                    error={errors.addressLine2?.message}
-                />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input
+                        id="companyName"
+                        label="Company Name"
+                        {...register('companyName', { required: 'Company name is required' })}
+                        error={errors.companyName?.message}
+                        className="md:col-span-2"
+                    />
+                    <Input
+                        id="addressLine1"
+                        label="Address Line 1"
+                        {...register('addressLine1', { required: 'Address is required' })}
+                        error={errors.addressLine1?.message}
+                        className="md:col-span-2"
+                    />
+                     <Input
+                        id="addressLine2"
+                        label="Address Line 2 (City, State, PIN)"
+                        {...register('addressLine2', { required: 'City, State, and PIN are required' })}
+                        error={errors.addressLine2?.message}
+                        className="md:col-span-2"
+                    />
                     <Input
                         id="email"
                         label="Email Address"
@@ -77,15 +80,16 @@ const SettingsPage: React.FC = () => {
                         {...register('phone')}
                         error={errors.phone?.message}
                     />
+                    <Input
+                        id="gstin"
+                        label="Company GSTIN"
+                        {...register('gstin', { required: 'GSTIN is required' })}
+                        error={errors.gstin?.message}
+                        className="md:col-span-2"
+                    />
                 </div>
-                <Input
-                    id="gstin"
-                    label="Company GSTIN"
-                    {...register('gstin', { required: 'GSTIN is required' })}
-                    error={errors.gstin?.message}
-                />
-                 <div className="pt-4">
-                    <Button type="submit" className="w-full" disabled={!isDirty}>
+                 <div className="pt-4 flex justify-end">
+                    <Button type="submit" disabled={!isDirty}>
                         Save Settings
                     </Button>
                 </div>

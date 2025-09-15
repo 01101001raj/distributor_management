@@ -20,7 +20,7 @@ interface DateRangePickerProps {
 
 const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, label }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [currentMonth, setCurrentMonth] = useState(value.from || new Date());
+    const [currentMonth, setCurrentMonth] = useState(value.to || new Date());
     const pickerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -56,25 +56,21 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, labe
         const today = new Date();
         let from = new Date();
         let to = new Date();
-        today.setHours(23, 59, 59, 999);
+        to.setHours(23, 59, 59, 999);
         from.setHours(0, 0, 0, 0);
 
         switch (rangeType) {
             case 'last1Month':
-                from.setMonth(today.getMonth() - 1);
-                to = today;
+                from.setMonth(to.getMonth() - 1);
                 break;
             case 'last3Months':
-                from.setMonth(today.getMonth() - 3);
-                to = today;
+                from.setMonth(to.getMonth() - 3);
                 break;
             case 'last6Months':
-                from.setMonth(today.getMonth() - 6);
-                to = today;
+                from.setMonth(to.getMonth() - 6);
                 break;
             case 'last1Year':
-                from.setFullYear(today.getFullYear() - 1);
-                to = today;
+                from.setFullYear(to.getFullYear() - 1);
                 break;
         }
         onChange({ from, to });
@@ -89,12 +85,12 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, labe
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const firstDayOfMonth = new Date(year, month, 1).getDay();
+        const firstDayOfWeek = new Date(year, month, 1).getDay();
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-        const leadingBlanks = Array.from({ length: firstDayOfMonth }, (_, i) => null);
+        const leadingBlanks = Array.from({ length: firstDayOfWeek }, (_, i) => null);
 
         const quickRanges = [
             { label: 'Last Month', key: 'last1Month' },
@@ -104,8 +100,8 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, labe
         ];
 
         return (
-            <div className="absolute top-full left-0 mt-2 bg-card rounded-lg shadow-lg border border-border z-10 flex w-auto">
-                <div className="p-4 border-r border-border w-40">
+            <div className="absolute top-full left-0 mt-2 bg-card rounded-lg shadow-lg border border-border z-10 flex w-auto overflow-hidden">
+                <div className="p-4 border-r border-border bg-slate-50 w-40">
                     <h4 className="text-sm font-semibold text-text-primary mb-2">Quick Ranges</h4>
                     <div className="flex flex-col gap-1">
                         {quickRanges.map(range => (
@@ -135,23 +131,23 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, labe
                             const date = new Date(year, month, day);
                             date.setHours(0, 0, 0, 0);
                             
-                            const toDateNormalized = value.to ? new Date(value.to) : null;
-                            if (toDateNormalized) toDateNormalized.setHours(0, 0, 0, 0);
+                            const toDateNormalized = value.to ? new Date(new Date(value.to).toDateString()) : null;
+                            const fromDateNormalized = value.from ? new Date(new Date(value.from).toDateString()) : null;
                             
-                            const isFrom = value.from && date.getTime() === value.from.getTime();
+                            const isFrom = fromDateNormalized && date.getTime() === fromDateNormalized.getTime();
                             const isTo = toDateNormalized && date.getTime() === toDateNormalized.getTime();
-                            const isInRange = value.from && value.to && date > value.from && date < value.to;
+                            const isInRange = fromDateNormalized && toDateNormalized && date > fromDateNormalized && date < toDateNormalized;
                             const isToday = date.getTime() === today.getTime();
 
-                            const baseClasses = 'h-8 w-8 rounded-full text-sm transition-colors hover:bg-blue-200 flex items-center justify-center';
-                            let stateClasses = '';
+                            const baseClasses = 'h-8 w-8 rounded-full text-sm transition-colors flex items-center justify-center';
+                            let stateClasses = 'hover:bg-primary-lightest';
 
                             if (isFrom || isTo) {
                                 stateClasses = 'bg-primary text-white font-semibold';
                             } else if (isInRange) {
-                                stateClasses = 'bg-blue-100 rounded-none';
+                                stateClasses = 'bg-primary-lightest text-primary rounded-none';
                             } else if (isToday) {
-                                stateClasses = 'border border-primary';
+                                stateClasses = 'border border-primary text-primary';
                             }
                             
                             if (isFrom && value.to) stateClasses += ' rounded-r-none';
@@ -176,13 +172,13 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, labe
 
     return (
         <div className="relative w-full" ref={pickerRef}>
-             <label className="block text-sm font-medium text-text-secondary mb-1">{label}</label>
+             <label className="block text-sm font-medium text-text-secondary mb-1.5">{label}</label>
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between px-3 py-2 border rounded-lg shadow-sm bg-white border-border focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                className="w-full flex items-center justify-between px-3 py-2 border rounded-md shadow-sm bg-input-bg border-border focus-visible:outline-none focus-visible:ring-2"
             >
-                <span className="text-text-primary">
+                <span className="text-text-primary text-sm">
                     {value.from ? formatDate(value.from) : 'Select Start Date'}
                     {value.to ? ` - ${formatDate(value.to)}` : ''}
                 </span>

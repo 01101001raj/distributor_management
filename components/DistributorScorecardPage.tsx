@@ -7,7 +7,8 @@ import Input from './common/Input';
 import { ClipboardList, Award, Sparkles, AlertTriangle, Search } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { UserRole, OrderStatus } from '../types';
-import { Link } from 'react-router-dom';
+// FIX: Use namespace import for react-router-dom to resolve export errors.
+import * as ReactRouterDOM from 'react-router-dom';
 
 interface ScorecardEntry {
     distributorId: string;
@@ -20,7 +21,7 @@ const ScorecardItem: React.FC<{ entry: ScorecardEntry, rank: number }> = ({ entr
     const getScoreColor = (score: number) => {
         if (score >= 80) return { bg: 'bg-green-600', text: 'text-green-100', border: 'border-green-700' };
         if (score >= 50) return { bg: 'bg-yellow-500', text: 'text-yellow-100', border: 'border-yellow-600' };
-        return { bg: 'bg-red-600', text: 'text-red-100', border: 'border-red-700' };
+        return { bg: 'bg-red-600', text: 'text-red-100', border: 'border-red-600' };
     };
 
     const scoreColor = getScoreColor(entry.score);
@@ -34,9 +35,9 @@ const ScorecardItem: React.FC<{ entry: ScorecardEntry, rank: number }> = ({ entr
                 <div className="text-sm font-semibold text-text-secondary">Rank #{rank}</div>
             </div>
             <div className="border-t md:border-t-0 md:border-l border-border w-full md:w-auto pt-4 md:pt-0 md:pl-4">
-                <Link to={`/distributors/${entry.distributorId}`} className="text-lg font-bold text-primary hover:underline">
+                <ReactRouterDOM.Link to={`/distributors/${entry.distributorId}`} className="text-lg font-bold text-text-primary hover:text-primary transition-colors">
                     {entry.distributorName}
-                </Link>
+                </ReactRouterDOM.Link>
                 <ul className="mt-2 list-disc list-inside space-y-1 text-sm text-text-secondary">
                     {entry.explanation.map((line, index) => <li key={index}>{line}</li>)}
                 </ul>

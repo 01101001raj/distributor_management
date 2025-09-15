@@ -15,18 +15,17 @@ interface StatCardProps {
     title: string;
     value: string;
     icon: React.ReactNode;
-    iconBgClass: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon, iconBgClass }) => (
-    <Card>
-        <div className="flex items-center">
-            <div className={`p-3 rounded-full ${iconBgClass} mr-4`}>
-                {icon}
-            </div>
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon }) => (
+    <Card className="p-4">
+        <div className="flex justify-between items-start">
             <div>
                 <p className="text-sm font-medium text-text-secondary">{title}</p>
-                <p className="text-2xl font-bold">{value}</p>
+                <p className="text-2xl font-bold text-text-primary mt-1">{value}</p>
+            </div>
+            <div className="p-2 bg-primary-lightest rounded-md text-primary">
+                {icon}
             </div>
         </div>
     </Card>
@@ -67,7 +66,7 @@ const CustomStateTooltip = ({ active, payload, label }: any) => {
 const CustomSalesTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
         return (
-            <div className="bg-card p-3 border rounded-lg shadow-lg text-sm">
+            <div className="bg-card p-3 border rounded-lg shadow-md text-sm">
                 <p className="font-bold mb-1 text-text-primary">{label}</p>
                 <p className="text-primary">{`Sales: ${formatIndianCurrency(payload[0].value)}`}</p>
             </div>
@@ -471,7 +470,13 @@ const SalesPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <Card>
-                <h2 className="text-xl font-bold mb-4">Sales Report Filters</h2>
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
+                    <h2 className="text-xl font-bold">Sales Report Filters</h2>
+                     <Button onClick={handleExportDetailedCsv} variant="secondary">
+                        <Download size={16}/>
+                        Export Detailed CSV
+                    </Button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                     <DateRangePicker 
                         label="Select Date Range"
@@ -500,17 +505,13 @@ const SalesPage: React.FC = () => {
                         <option value="all">All Schemes</option>
                         {schemes.map(s => <option key={s.id} value={s.id}>{s.description}</option>)}
                     </Select>
-                    <Button onClick={handleExportDetailedCsv} variant="secondary">
-                        <Download size={16}/>
-                        Export Detailed CSV
-                    </Button>
                 </div>
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard title="Total Sales Value" value={formatIndianCurrency(salesData.totalSalesValue)} icon={<DollarSign />} iconBgClass="bg-primary/10 text-primary" />
-                <StatCard title="Total Paid Items" value={formatIndianNumber(salesData.totalPaidQty)} icon={<Package />} iconBgClass="bg-green-500/10 text-green-600" />
-                <StatCard title="Total Free Items" value={formatIndianNumber(salesData.totalFreeQty)} icon={<Gift />} iconBgClass="bg-yellow-500/10 text-yellow-600" />
+                <StatCard title="Total Sales Value" value={formatIndianCurrency(salesData.totalSalesValue)} icon={<DollarSign />} />
+                <StatCard title="Total Paid Items" value={formatIndianNumber(salesData.totalPaidQty)} icon={<Package />} />
+                <StatCard title="Total Free Items" value={formatIndianNumber(salesData.totalFreeQty)} icon={<Gift />} />
             </div>
             
             <Card>
@@ -524,7 +525,7 @@ const SalesPage: React.FC = () => {
                                     <button
                                         key={gran}
                                         onClick={() => setChartGranularity(gran)}
-                                        className={`px-2 py-0.5 text-xs rounded-md capitalize transition-colors ${chartGranularity === gran ? 'bg-primary text-white shadow' : 'text-text-secondary hover:bg-slate-200'}`}
+                                        className={`px-2 py-0.5 text-xs rounded-md capitalize transition-colors ${chartGranularity === gran ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:bg-slate-200'}`}
                                     >
                                         {gran}
                                     </button>
@@ -538,7 +539,7 @@ const SalesPage: React.FC = () => {
                                     <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
                                     <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatIndianCurrencyShort(Number(value))} />
                                     <Tooltip content={<CustomSalesTooltip />} cursor={{ fill: '#f8f9fa' }} />
-                                    <Line type="monotone" dataKey="sales" stroke="#334155" strokeWidth={2} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6, fill: '#334155' }} />
+                                    <Line type="monotone" dataKey="sales" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6, fill: 'var(--color-primary)' }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         ) : <div className="flex items-center justify-center h-[300px] bg-background rounded-md text-text-secondary">No sales data for trend chart.</div>}
@@ -547,8 +548,8 @@ const SalesPage: React.FC = () => {
                         <div className="flex justify-center items-center mb-2 gap-4">
                             <h4 className="font-semibold text-center text-text-secondary">Top Selling Products</h4>
                             <div className="flex gap-1 p-0.5 bg-background rounded-md border border-border">
-                                <button onClick={() => setTopProductsCount(5)} className={`px-2 py-0.5 text-xs rounded-md transition-colors ${topProductsCount === 5 ? 'bg-primary text-white shadow' : 'text-text-secondary hover:bg-slate-200'}`}>Top 5</button>
-                                <button onClick={() => setTopProductsCount(10)} className={`px-2 py-0.5 text-xs rounded-md transition-colors ${topProductsCount === 10 ? 'bg-primary text-white shadow' : 'text-text-secondary hover:bg-slate-200'}`}>Top 10</button>
+                                <button onClick={() => setTopProductsCount(5)} className={`px-2 py-0.5 text-xs rounded-md transition-colors ${topProductsCount === 5 ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:bg-slate-200'}`}>Top 5</button>
+                                <button onClick={() => setTopProductsCount(10)} className={`px-2 py-0.5 text-xs rounded-md transition-colors ${topProductsCount === 10 ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:bg-slate-200'}`}>Top 10</button>
                             </div>
                         </div>
                          {salesData.topProductsData.length > 0 ? (
@@ -559,7 +560,7 @@ const SalesPage: React.FC = () => {
                                     <YAxis type="category" dataKey="skuName" width={100} fontSize={12} tickLine={false} axisLine={false} interval={0} />
                                     <Tooltip formatter={(value) => formatIndianNumber(Number(value))} cursor={{fill: '#f8f9fa'}} />
                                     <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                    <Bar dataKey="paid" name="Paid" stackId="a" fill="#334155" barSize={20} />
+                                    <Bar dataKey="paid" name="Paid" stackId="a" fill="var(--color-primary)" barSize={20} />
                                     <Bar dataKey="free" name="Free" stackId="a" fill="#82ca9d" barSize={20} />
                                 </RechartsBarChart>
                             </ResponsiveContainer>
@@ -644,7 +645,7 @@ const SalesPage: React.FC = () => {
                                 {PRODUCT_ORDER.map(name => (
                                     <React.Fragment key={name}>
                                         <SortableTableHeader label={name} sortKey={name as any} requestSort={requestDistributorSalesSort} sortConfig={distributorSalesSortConfig} className="text-center whitespace-nowrap" />
-                                        <th className="p-3 font-semibold text-text-secondary text-center whitespace-nowrap bg-green-50">{name} Free</th>
+                                        <th className="p-3 font-semibold text-text-secondary text-center whitespace-nowrap bg-green-100">{name} Free</th>
                                     </React.Fragment>
                                 ))}
                                 <SortableTableHeader label="Amount" sortKey="amount" requestSort={requestDistributorSalesSort as any} sortConfig={distributorSalesSortConfig} className="text-right whitespace-nowrap" />
@@ -657,7 +658,7 @@ const SalesPage: React.FC = () => {
                                     {PRODUCT_ORDER.map(name => (
                                         <React.Fragment key={name}>
                                             <td className="p-3 text-center font-semibold">{sale[name] ? formatIndianNumber(sale[name]) : '-'}</td>
-                                            <td className="p-3 text-center font-semibold text-green-600 bg-green-50">{sale[`${name} free`] ? formatIndianNumber(sale[`${name} free`]) : '-'}</td>
+                                            <td className="p-3 text-center font-semibold text-green-700 bg-green-100">{sale[`${name} free`] ? formatIndianNumber(sale[`${name} free`]) : '-'}</td>
                                         </React.Fragment>
                                     ))}
                                     <td className="p-3 text-right font-bold">{formatIndianCurrency(sale.amount)}</td>
@@ -670,7 +671,7 @@ const SalesPage: React.FC = () => {
                                 {PRODUCT_ORDER.map(name => (
                                     <React.Fragment key={name}>
                                         <td className="p-3 text-center whitespace-nowrap">{formatIndianNumber(salesData.salesTotals[name])}</td>
-                                        <td className="p-3 text-center whitespace-nowrap bg-green-50 text-green-700">{formatIndianNumber(salesData.salesTotals[`${name} free`])}</td>
+                                        <td className="p-3 text-center whitespace-nowrap bg-green-100 text-green-800">{formatIndianNumber(salesData.salesTotals[`${name} free`])}</td>
                                     </React.Fragment>
                                 ))}
                                 <td className="p-3 text-right whitespace-nowrap">{formatIndianCurrency(salesData.salesTotals.amount)}</td>
